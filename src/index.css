@@ -1,0 +1,102 @@
+:root {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* On force le mode sombre pour correspondre à ton design */
+  color-scheme: dark; 
+  color: rgba(255, 255, 255, 0.87);
+  
+  /* Ton fond d'écran Global et Fixe */
+  background-color: #020617; 
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  
+  /* IMPORTANT : J'ai retiré 'display: flex' et 'place-items: center' 
+     car cela empêche le scroll de fonctionner sur les longues pages */
+  display: block; 
+  
+  min-width: 320px;
+  
+  /* --- CONFIGURATION DU FOND FIXE --- */
+  background-image: radial-gradient(circle at 50% -20%, #1e293b, #020617);
+  background-attachment: fixed; /* Le fond ne bouge pas */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  min-height: 100vh; /* Prend toute la hauteur de l'écran */
+  /* ---------------------------------- */
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* Scrollbar personnalisée (Style Cyber) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a; 
+}
+::-webkit-scrollbar-thumb {
+  background: #334155; 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569; 
+}
+
+/* J'ai commenté la partie qui forçait le fond blanc en mode clair,
+   sinon ton design sombre devient illisible pour ceux qui ont un PC en mode clair */
+/* @media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+*/

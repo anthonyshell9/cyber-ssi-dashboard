@@ -1,0 +1,42 @@
+.map-wrapper {
+  margin-bottom: 30px;
+  animation: fadeIn 1s ease-out;
+}
+
+.map-title {
+  color: #06b6d4;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 1.1rem;
+  border-left: 4px solid #06b6d4;
+  padding-left: 10px;
+}
+
+.map-container-border {
+  height: 400px;
+  width: 100%;
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+  position: relative;
+}
+
+/* Style de la popup Leaflet */
+.leaflet-popup-content-wrapper {
+  background: #1e293b;
+  color: white;
+  border: 1px solid #334155;
+}
+.leaflet-popup-tip {
+  background: #1e293b;
+}
+
+.map-popup {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+}
+.map-popup strong { color: #06b6d4; font-size: 1rem; }
+.map-popup .ok { color: #10b981; font-weight: bold; }
+.map-popup .ko { color: #f59e0b; font-weight: bold; }

@@ -1,0 +1,48 @@
+.crisis-room {
+    min-height: 100vh; background: #0f172a; color: white; padding: 20px;
+    font-family: 'Inter', sans-serif; position: relative;
+}
+
+.crisis-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid #ef4444; padding-bottom: 20px; margin-bottom: 30px;
+}
+.header-title h1 { margin: 0; color: #ef4444; letter-spacing: 2px; font-size: 2.5rem; }
+.live-indicator { 
+    color: #ef4444; font-weight: bold; border: 1px solid #ef4444; 
+    padding: 5px 15px; border-radius: 50px; display: flex; align-items: center; gap: 10px;
+}
+.blink-dot { width: 10px; height: 10px; background: #ef4444; border-radius: 50%; animation: blink 1s infinite; }
+.btn-back-crisis { background: transparent; border: 1px solid #64748b; color: #94a3b8; padding: 10px 20px; cursor: pointer; border-radius: 4px; }
+
+/* CARTES ACTIVES */
+.incidents-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 25px; }
+.incident-card {
+    background: #1e293b; padding: 20px; border-radius: 8px; border-top: 5px solid #64748b;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3); transition: 0.3s;
+}
+.incident-card.Critique { border-top-color: #ef4444; background: linear-gradient(180deg, rgba(239, 68, 68, 0.1) 0%, #1e293b 100%); border: 1px solid #ef4444; }
+.incident-card.Majeur { border-top-color: #f59e0b; }
+
+.card-top { display: flex; justify-content: space-between; margin-bottom: 15px; }
+.supplier-tag { font-weight: bold; color: #fff; }
+.date-tag { color: #94a3b8; font-size: 0.9rem; }
+.impact-box { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; margin: 15px 0; font-size: 0.9rem; color: #cbd5e1; }
+
+.card-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+.badge-gravite { padding: 4px 10px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
+.badge-gravite.Critique { background: #ef4444; color: white; }
+.badge-gravite.Majeur { background: #f59e0b; color: black; }
+.badge-gravite.Faible { background: #3b82f6; color: white; }
+
+.btn-resolve { background: #10b981; border: none; padding: 8px 12px; cursor: pointer; color: #020617; font-weight: bold; border-radius: 4px; }
+.btn-details { background: transparent; border: 1px solid #64748b; color: white; padding: 8px 12px; cursor: pointer; border-radius: 4px; }
+
+/* TABLEAU HISTORIQUE */
+.history-zone { margin-top: 50px; border-top: 1px solid #334155; padding-top: 20px; }
+.history-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+.history-table th { text-align: left; color: #94a3b8; padding: 10px; border-bottom: 1px solid #475569; }
+.history-table td { padding: 10px; border-bottom: 1px solid #334155; color: #cbd5e1; }
+.all-clear { text-align: center; color: #10b981; font-size: 1.2rem; padding: 40px; border: 2px dashed #10b981; border-radius: 12px; }
+
+@keyframes blink { 50% { opacity: 0; } }
