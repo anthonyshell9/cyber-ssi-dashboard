@@ -7,7 +7,7 @@ import { useNotification } from "./NotificationContext";
 
 import DashboardStats from "./DashboardStats.jsx";
 import CyberMap from "./CyberMap.jsx";
-import "./Gestion.css";
+import './gestion.css'; // Assure-toi que c'est bien écrit en minuscule ici
 
 const Gestion = ({ setConnectedUser }) => {
   const navigate = useNavigate();
