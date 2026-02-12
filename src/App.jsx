@@ -24,6 +24,7 @@ import IsoControls from "./pages/IsoControls.jsx";
 import AuditProgram from "./pages/AuditProgram.jsx";
 import SlaMonitoring from "./pages/SlaMonitoring.jsx";
 import SoaDashboard from "./pages/SoaDashboard.jsx";
+import Evaluations from "./pages/Evaluations.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 import "./App.css";
@@ -118,6 +119,7 @@ function App() {
           <Route path="/audits" element={<ProtectedRoute user={connectedUser}><AuditsGlobal /></ProtectedRoute>} />
           <Route path="/annuaire" element={<ProtectedRoute user={connectedUser}><ContactsGlobal /></ProtectedRoute>} />
           <Route path="/compare" element={<ProtectedRoute user={connectedUser}><VendorCompare /></ProtectedRoute>} />
+          <Route path="/evaluations" element={<ProtectedRoute user={connectedUser}><Evaluations /></ProtectedRoute>} />
 
           {/* DORA COMPLIANCE */}
           <Route path="/dora-register" element={<ProtectedRoute user={connectedUser}><DoraRegister /></ProtectedRoute>} />

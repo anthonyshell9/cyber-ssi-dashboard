@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { doc, getDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useNotification } from "../hooks/NotificationContext";
+import ScoreCalculator from "../components/ScoreCalculator";
 import "./DetailsFournisseur.css";
 
 const DetailsFournisseur = () => {
@@ -24,6 +25,7 @@ const DetailsFournisseur = () => {
   const [newContact, setNewContact] = useState({ nom: "", role: "", email: "", tel: "" });
   const [newAudit, setNewAudit] = useState({ type: "Audit Sécurité", date: "", resultat: "En attente" });
   const [newIncident, setNewIncident] = useState({ titre: "", gravite: "Majeur", statut: "En cours", impact: "", date: "" });
+  const [showScoreCalc, setShowScoreCalc] = useState(false);
 
   // 1. CHARGEMENT
   useEffect(() => {
@@ -96,6 +98,22 @@ const DetailsFournisseur = () => {
     setNewIncident({ titre: "", gravite: "Majeur", statut: "En cours", impact: "", date: "" });
   };
 
+  // EVALUATION - Appliquer les scores et sauvegarder en base
+  const handleApplyEvaluation = async (scores) => {
+    const ref = doc(db, "fournisseurs", id);
+    await updateDoc(ref, {
+      niveauConfiance: scores.niveauConfiance,
+      niveauDependance: scores.niveauDependance,
+      niveauMaturite: scores.niveauMaturite,
+      doraReadiness: scores.doraReadiness,
+      isoMaturity: scores.isoMaturity,
+      lastEvaluation: new Date().toISOString(),
+    });
+    setFournisseur(prev => ({ ...prev, ...scores, lastEvaluation: new Date().toISOString() }));
+    setShowScoreCalc(false);
+    addNotification("success", "Evaluation enregistree. Scores DORA + ISO mis a jour.");
+  };
+
   if (loading) return <div className="loader-screen"><div className="spinner"></div>Chargement...</div>;
   if (!fournisseur) return <div className="error-screen">Dossier introuvable.</div>;
 
@@ -116,6 +134,7 @@ const DetailsFournisseur = () => {
           <button className={activeTab==='contacts'?'active':''} onClick={()=>setActiveTab('contacts')}>📇 Équipe ({contacts.length})</button>
           <button className={activeTab==='audits'?'active':''} onClick={()=>setActiveTab('audits')}>📅 Audits ({audits.length})</button>
           <button className={`tab-danger ${activeTab==='incidents'?'active':''}`} onClick={()=>setActiveTab('incidents')}>🚨 Incidents ({incidents.length})</button>
+          <button className={activeTab==='evaluation'?'active':''} onClick={()=>setActiveTab('evaluation')} style={{color: '#8b5cf6', borderColor: 'rgba(139, 92, 246, 0.3)'}}>📊 Evaluation</button>
         </div>
       </header>
 
@@ -216,6 +235,58 @@ const DetailsFournisseur = () => {
                <button type="submit" className="btn-add-danger">DÉCLARER 🚨</button>
              </form>
              <div className="incidents-list">{incidents.map(inc => (<div key={inc.id} className={`incident-item ${inc.gravite}`}><h4>{inc.titre}</h4><span className="inc-date">{inc.dateDeclaration?.seconds ? new Date(inc.dateDeclaration.seconds * 1000).toLocaleString() : new Date(inc.dateDeclaration).toLocaleString()}</span></div>))}</div>
+          </div>
+        )}
+
+        {/* ONGLET 5 : EVALUATION DORA + ISO 27001 */}
+        {activeTab === 'evaluation' && (
+          <div className="tab-panel fade-in">
+            {/* Scores actuels */}
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '15px', marginBottom: '25px'}}>
+              <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '20px', textAlign: 'center'}}>
+                <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>Confiance</div>
+                <div style={{fontSize: '2rem', fontWeight: 'bold', color: Number(fournisseur.niveauConfiance) >= 4 ? '#10b981' : Number(fournisseur.niveauConfiance) >= 3 ? '#f59e0b' : '#ef4444'}}>{fournisseur.niveauConfiance || '—'}/5</div>
+              </div>
+              <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '20px', textAlign: 'center'}}>
+                <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>Dependance</div>
+                <div style={{fontSize: '2rem', fontWeight: 'bold', color: Number(fournisseur.niveauDependance) <= 2 ? '#10b981' : '#f59e0b'}}>{fournisseur.niveauDependance || '—'}/4</div>
+              </div>
+              <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '20px', textAlign: 'center'}}>
+                <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>DORA Readiness</div>
+                <div style={{fontSize: '2rem', fontWeight: 'bold', color: Number(fournisseur.doraReadiness) >= 70 ? '#10b981' : Number(fournisseur.doraReadiness) >= 40 ? '#f59e0b' : '#ef4444'}}>{fournisseur.doraReadiness || '—'}%</div>
+              </div>
+              <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '20px', textAlign: 'center'}}>
+                <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>ISO 27001 Maturite</div>
+                <div style={{fontSize: '2rem', fontWeight: 'bold', color: Number(fournisseur.isoMaturity) >= 4 ? '#10b981' : Number(fournisseur.isoMaturity) >= 3 ? '#f59e0b' : '#ef4444'}}>{fournisseur.isoMaturity || '—'}/5</div>
+              </div>
+            </div>
+
+            {/* Derniere evaluation */}
+            {fournisseur.lastEvaluation && (
+              <div style={{color: '#64748b', fontSize: '0.85rem', marginBottom: '20px', textAlign: 'center'}}>
+                Derniere evaluation : {new Date(fournisseur.lastEvaluation).toLocaleDateString('fr-FR', {day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'})}
+              </div>
+            )}
+
+            {/* Bouton relancer evaluation */}
+            <div style={{textAlign: 'center'}}>
+              <button onClick={() => setShowScoreCalc(true)} style={{
+                background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', color: 'white', border: 'none',
+                padding: '14px 30px', borderRadius: '8px', fontSize: '1.05rem', fontWeight: 'bold',
+                cursor: 'pointer', boxShadow: '0 0 20px rgba(6, 182, 212, 0.4)'
+              }}>
+                {fournisseur.lastEvaluation ? 'Re-evaluer ce fournisseur' : 'Lancer la premiere evaluation'}
+              </button>
+              <p style={{color: '#94a3b8', fontSize: '0.8rem', marginTop: '10px'}}>Questionnaire DORA + ISO 27001 : certifications, RGPD, continuite, incidents...</p>
+            </div>
+
+            {/* Modal ScoreCalculator */}
+            {showScoreCalc && (
+              <ScoreCalculator
+                onClose={() => setShowScoreCalc(false)}
+                onApply={handleApplyEvaluation}
+              />
+            )}
           </div>
         )}
 

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "./AjouterFournisseur.css";
 import { db } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import ScoreCalculator from "../components/ScoreCalculator";
 
 const TOTAL_STEPS = 11;
 
@@ -10,6 +11,7 @@ const AjouterFournisseur = () => {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
   const [isSuccess, setIsSuccess] = useState(false);
+  const [showScoreCalc, setShowScoreCalc] = useState(false);
 
   const [formData, setFormData] = useState({
     nomFournisseur: "", email: "", organisation: "", siret: "", 
@@ -87,6 +89,10 @@ const AjouterFournisseur = () => {
         ...formData,
         niveauConfiance: Number(formData.niveauConfiance),
         niveauDependance: Number(formData.niveauDependance),
+        niveauMaturite: Number(formData.niveauMaturite || 0),
+        doraReadiness: Number(formData.doraReadiness || 0),
+        isoMaturity: Number(formData.isoMaturity || 0),
+        lastEvaluation: new Date().toISOString(),
         createdAt: serverTimestamp(),
         status: "en_attente",
       });
@@ -168,19 +174,78 @@ const AjouterFournisseur = () => {
               {step === 8 && (<><Input label="Certifications (ISO, HDS)" name="certificationISO" val={formData.certificationISO} change={handleChange} placeholder="Ex: ISO 27001" /><Select label="NDA Signé ?" name="ndaSigne" val={formData.ndaSigne} change={handleChange} opts={["OUI", "NON"]} /></>)}
               {step === 9 && (<><Input label="Action Sécurité Requise" name="actionCISO" val={formData.actionCISO} change={handleChange} placeholder="Audit, PAS, Questionnaire..." /><Input label="Continuité (RTO/RPO)" name="planReprise" val={formData.planReprise} change={handleChange} placeholder="Ex: RTO < 4h" /></>)}
 
-              {/* ETAPE 10 : SCORING (Affichage Haut + Scroll) */}
+              {/* ETAPE 10 : SCORING AVEC ASSISTANT IA */}
               {step === 10 && (
                 <div className="scoring-wrapper">
-                  <div className="score-section">
-                    <h3>Niveau de Confiance</h3>
-                    <div className="cards-row">{[1, 2, 3, 4, 5].map(n => (<div key={n} className={`score-card c-${n} ${formData.niveauConfiance == n ? 'active' : ''}`} onClick={() => handleScoreSelect('niveauConfiance', n)}>{n}</div>))}</div>
-                    <div className="info-panel"><table className="info-table"><thead><tr><th>Note</th><th>Fiabilité du fournisseur</th></tr></thead><tbody><tr><td><span className="badge bad">1-2</span></td><td>Risqué / Pas de certification</td></tr><tr><td><span className="badge mid">3</span></td><td>Standard / Conforme au marché</td></tr><tr><td><span className="badge good">4-5</span></td><td>Excellente / Certifié ISO / Audité</td></tr></tbody></table></div>
+                  {/* Bouton pour lancer l'évaluation assistée */}
+                  <div style={{textAlign: 'center', marginBottom: '25px'}}>
+                    <button type="button" onClick={() => setShowScoreCalc(true)} style={{
+                      background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', color: 'white', border: 'none',
+                      padding: '14px 28px', borderRadius: '8px', fontSize: '1.05rem', fontWeight: 'bold',
+                      cursor: 'pointer', boxShadow: '0 0 20px rgba(6, 182, 212, 0.4)'
+                    }}>
+                      Lancer l'Evaluation Assistee (DORA + ISO)
+                    </button>
+                    <p style={{color: '#94a3b8', fontSize: '0.85rem', marginTop: '10px'}}>Calcule automatiquement Confiance, DORA Readiness et Maturite ISO 27001</p>
                   </div>
-                  <div className="score-section">
-                    <h3>Niveau de Dépendance</h3>
-                    <div className="cards-row">{[1, 2, 3, 4].map(n => (<div key={n} className={`score-card d-${n} ${formData.niveauDependance == n ? 'active' : ''}`} onClick={() => handleScoreSelect('niveauDependance', n)}>{n}</div>))}</div>
-                    <div className="info-panel warn"><table className="info-table"><thead><tr><th>Note</th><th>Difficulté de remplacement</th></tr></thead><tbody><tr><td><span className="badge low">1</span></td><td>**Faible** : Facilement remplaçable</td></tr><tr><td><span className="badge mid">2</span></td><td>**Moyenne** : Remplaçable avec effort</td></tr><tr><td><span className="badge mid">3</span></td><td>**Forte** : Difficile (Technique/Coût)</td></tr><tr><td><span className="badge critical">4</span></td><td>**CRITIQUE** : Impossible / Unique</td></tr></tbody></table></div>
+
+                  {/* Affichage des scores calculés (si remplis) */}
+                  {formData.niveauConfiance && (
+                    <div style={{display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap'}}>
+                      <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '15px 25px', textAlign: 'center'}}>
+                        <div style={{color: '#94a3b8', fontSize: '0.8rem'}}>Confiance</div>
+                        <div style={{fontSize: '1.8rem', fontWeight: 'bold', color: Number(formData.niveauConfiance) >= 4 ? '#10b981' : Number(formData.niveauConfiance) >= 3 ? '#f59e0b' : '#ef4444'}}>{formData.niveauConfiance}/5</div>
+                      </div>
+                      <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '15px 25px', textAlign: 'center'}}>
+                        <div style={{color: '#94a3b8', fontSize: '0.8rem'}}>Dependance</div>
+                        <div style={{fontSize: '1.8rem', fontWeight: 'bold', color: Number(formData.niveauDependance) <= 2 ? '#10b981' : '#f59e0b'}}>{formData.niveauDependance}/4</div>
+                      </div>
+                      {formData.doraReadiness !== undefined && (
+                        <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '15px 25px', textAlign: 'center'}}>
+                          <div style={{color: '#94a3b8', fontSize: '0.8rem'}}>DORA Readiness</div>
+                          <div style={{fontSize: '1.8rem', fontWeight: 'bold', color: formData.doraReadiness >= 70 ? '#10b981' : formData.doraReadiness >= 40 ? '#f59e0b' : '#ef4444'}}>{formData.doraReadiness}%</div>
+                        </div>
+                      )}
+                      {formData.isoMaturity !== undefined && (
+                        <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '15px 25px', textAlign: 'center'}}>
+                          <div style={{color: '#94a3b8', fontSize: '0.8rem'}}>ISO 27001</div>
+                          <div style={{fontSize: '1.8rem', fontWeight: 'bold', color: formData.isoMaturity >= 4 ? '#10b981' : formData.isoMaturity >= 3 ? '#f59e0b' : '#ef4444'}}>{formData.isoMaturity}/5</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Fallback manuel */}
+                  <div style={{borderTop: '1px solid #334155', paddingTop: '20px', marginTop: '10px'}}>
+                    <p style={{color: '#64748b', fontSize: '0.85rem', textAlign: 'center', marginBottom: '15px'}}>Ou saisie manuelle :</p>
+                    <div className="score-section">
+                      <h3>Niveau de Confiance</h3>
+                      <div className="cards-row">{[1, 2, 3, 4, 5].map(n => (<div key={n} className={`score-card c-${n} ${formData.niveauConfiance == n ? 'active' : ''}`} onClick={() => handleScoreSelect('niveauConfiance', n)}>{n}</div>))}</div>
+                    </div>
+                    <div className="score-section">
+                      <h3>Niveau de Dependance</h3>
+                      <div className="cards-row">{[1, 2, 3, 4].map(n => (<div key={n} className={`score-card d-${n} ${formData.niveauDependance == n ? 'active' : ''}`} onClick={() => handleScoreSelect('niveauDependance', n)}>{n}</div>))}</div>
+                    </div>
                   </div>
+
+                  {/* Modal ScoreCalculator */}
+                  {showScoreCalc && (
+                    <ScoreCalculator
+                      onClose={() => setShowScoreCalc(false)}
+                      onApply={(scores) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          niveauConfiance: scores.niveauConfiance,
+                          niveauDependance: scores.niveauDependance,
+                          niveauMaturite: scores.niveauMaturite,
+                          niveauPenetration: scores.niveauPenetration,
+                          doraReadiness: scores.doraReadiness,
+                          isoMaturity: scores.isoMaturity,
+                        }));
+                        setShowScoreCalc(false);
+                      }}
+                    />
+                  )}
                 </div>
               )}
 

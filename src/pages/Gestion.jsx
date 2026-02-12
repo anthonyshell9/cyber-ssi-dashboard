@@ -110,6 +110,7 @@ const Gestion = ({ setConnectedUser }) => {
           <button className="nav-item" style={{color: '#8b5cf6', borderColor: 'rgba(139, 92, 246, 0.3)', marginLeft: '10px'}} onClick={() => navigate('/annuaire')}>ANNUAIRE</button>
 
           <button className="nav-item" style={{color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)', marginLeft: '10px'}} onClick={() => navigate('/compare')}>COMPARER</button>
+          <button className="nav-item" style={{color: '#8b5cf6', borderColor: 'rgba(139, 92, 246, 0.3)'}} onClick={() => navigate('/evaluations')}>EVALUATIONS</button>
 
           <div className="nav-separator" />
           <button className="nav-item nav-dora" style={{color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)', marginLeft: '10px'}} onClick={() => navigate('/dora-register')}>DORA</button>
