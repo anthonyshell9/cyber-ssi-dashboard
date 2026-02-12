@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import './ScoreCalculator.css';
 
+// EBIOS RM - Toutes les echelles 1-4
 const DEPENDANCE_LEVELS = [
   { value: 1, label: "Faible", desc: "Service non critique, alternatives disponibles" },
   { value: 2, label: "Moderee", desc: "Service utile, remplacement possible sous 3 mois" },
@@ -16,24 +17,21 @@ const PENETRATION_LEVELS = [
 ];
 
 const MATURITE_LEVELS = [
-  { value: 0, label: "Tres faible", desc: "Aucune mesure de securite identifiee" },
   { value: 1, label: "Faible", desc: "Mesures basiques, pas de certification" },
-  { value: 2, label: "En dev.", desc: "Processus en cours de formalisation" },
-  { value: 3, label: "Defini", desc: "Politiques documentees, certifications en cours" },
-  { value: 4, label: "Maitrise", desc: "ISO 27001, audits reguliers" },
-  { value: 5, label: "Excellent", desc: "Certifications multiples, maturite exemplaire" },
+  { value: 2, label: "Partielle", desc: "Processus en cours de formalisation" },
+  { value: 3, label: "Maitrisee", desc: "Politiques documentees, audits reguliers" },
+  { value: 4, label: "Exemplaire", desc: "Certifications multiples, maturite avancee" },
 ];
 
 const CONFIANCE_LEVELS = [
-  { value: 1, label: "Tres faible", desc: "Fournisseur inconnu, pas de references" },
-  { value: 2, label: "Faible", desc: "Peu de visibilite sur les pratiques" },
-  { value: 3, label: "Moderee", desc: "References correctes, engagement contractuel" },
-  { value: 4, label: "Elevee", desc: "Partenaire reconnu, historique positif" },
-  { value: 5, label: "Tres elevee", desc: "Partenaire strategique, certifie, audite" },
+  { value: 1, label: "Faible", desc: "Fournisseur inconnu, pas de references" },
+  { value: 2, label: "Moderee", desc: "Peu de visibilite, references limitees" },
+  { value: 3, label: "Elevee", desc: "Partenaire reconnu, historique positif" },
+  { value: 4, label: "Tres elevee", desc: "Partenaire strategique, certifie, audite" },
 ];
 
 const computeRiskScore = (dep, pen, mat, conf) => {
-  if (mat === 0) return { note: null, interpretation: "Non calculable - Maturite requise", color: "gray" };
+  if (!mat || !conf) return { note: null, interpretation: "Non calculable", color: "gray" };
   const note = (dep * pen) / (mat * conf);
   let interpretation, color;
   if (note < 1) { interpretation = "FAVORABLE"; color = "green"; }
@@ -58,7 +56,7 @@ const ScoreCalculator = ({ onClose, onApply }) => {
     const p = Number(scores.penetration);
     const m = Number(scores.maturite);
     const c = Number(scores.confiance);
-    if (!d || !p || (!m && scores.maturite === "") || !c) return null;
+    if (!d || !p || !m || !c) return null;
     return computeRiskScore(d, p, m, c);
   }, [scores.dependance, scores.penetration, scores.maturite, scores.confiance]);
 
@@ -94,11 +92,10 @@ const ScoreCalculator = ({ onClose, onApply }) => {
   return (
     <div className="calc-overlay">
       <div className="calc-modal">
-        <h3>Scoring FM-DS-100</h3>
+        <h3>Scoring EBIOS RM</h3>
         <p className="calc-formula">NOTE = (Dependance x Penetration) / (Maturite x Confiance)</p>
 
         <div className="calc-dimensions">
-          {/* Dependance */}
           <div className="calc-dim">
             <div className="calc-dim-label">Dependance (1-4)</div>
             <div className="calc-dim-row">
@@ -111,7 +108,6 @@ const ScoreCalculator = ({ onClose, onApply }) => {
             </div>
           </div>
 
-          {/* Penetration */}
           <div className="calc-dim">
             <div className="calc-dim-label">Penetration (1-4)</div>
             <div className="calc-dim-row">
@@ -124,12 +120,11 @@ const ScoreCalculator = ({ onClose, onApply }) => {
             </div>
           </div>
 
-          {/* Maturite */}
           <div className="calc-dim">
-            <div className="calc-dim-label">Maturite (0-5)</div>
-            <div className="calc-dim-row calc-dim-row-6">
+            <div className="calc-dim-label">Maturite (1-4)</div>
+            <div className="calc-dim-row">
               {MATURITE_LEVELS.map((l) => (
-                <div key={l.value} className={`calc-chip ${scores.maturite !== "" && Number(scores.maturite) === l.value ? "active chip-mat" : ""}`} onClick={() => select("maturite", l.value)} title={l.desc}>
+                <div key={l.value} className={`calc-chip ${Number(scores.maturite) === l.value ? "active chip-mat" : ""}`} onClick={() => select("maturite", l.value)} title={l.desc}>
                   <span className="chip-val">{l.value}</span>
                   <span className="chip-lbl">{l.label}</span>
                 </div>
@@ -137,10 +132,9 @@ const ScoreCalculator = ({ onClose, onApply }) => {
             </div>
           </div>
 
-          {/* Confiance */}
           <div className="calc-dim">
-            <div className="calc-dim-label">Confiance (1-5)</div>
-            <div className="calc-dim-row calc-dim-row-5">
+            <div className="calc-dim-label">Confiance (1-4)</div>
+            <div className="calc-dim-row">
               {CONFIANCE_LEVELS.map((l) => (
                 <div key={l.value} className={`calc-chip ${Number(scores.confiance) === l.value ? "active chip-conf" : ""}`} onClick={() => select("confiance", l.value)} title={l.desc}>
                   <span className="chip-val">{l.value}</span>
@@ -151,7 +145,6 @@ const ScoreCalculator = ({ onClose, onApply }) => {
           </div>
         </div>
 
-        {/* Live result */}
         {riskResult && (
           <div className="calc-result-box">
             {riskResult.note !== null ? (

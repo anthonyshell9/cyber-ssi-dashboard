@@ -49,11 +49,13 @@ const DemandesDashboard = () => {
 
   // RSSI review form state
   const [rssiScores, setRssiScores] = useState({
+    dependance: 1,
     penetration: 1,
     maturite: 1,
     confiance: 1,
   });
   const [commentaire, setCommentaire] = useState("");
+  const [strategieExit, setStrategieExit] = useState("");
   const [fournisseurCritique, setFournisseurCritique] = useState(false);
 
   useEffect(() => {
@@ -81,9 +83,8 @@ const DemandesDashboard = () => {
   // Live recomputed score when RSSI adjusts
   const liveScore = useMemo(() => {
     if (!selectedDemande) return null;
-    const dep = Number(selectedDemande.dependance) || 1;
     return computeRiskScore(
-      dep,
+      Number(rssiScores.dependance),
       Number(rssiScores.penetration),
       Number(rssiScores.maturite),
       Number(rssiScores.confiance)
@@ -93,17 +94,20 @@ const DemandesDashboard = () => {
   const openReview = (demande) => {
     setSelectedDemande(demande);
     setRssiScores({
+      dependance: demande.dependance || 1,
       penetration: demande.penetration || 1,
       maturite: demande.maturite || 1,
       confiance: demande.confiance || 1,
     });
     setCommentaire("");
+    setStrategieExit(demande.strategieExit || "");
     setFournisseurCritique(false);
   };
 
   const closeReview = () => {
     setSelectedDemande(null);
     setCommentaire("");
+    setStrategieExit("");
     setFournisseurCritique(false);
   };
 
@@ -117,7 +121,9 @@ const DemandesDashboard = () => {
         status: "approuvee",
         validationRSSI: "Approuve",
         commentaireRSSI: commentaire,
+        strategieExitRSSI: strategieExit,
         dateValidation: serverTimestamp(),
+        dependanceRSSI: Number(rssiScores.dependance),
         penetrationRSSI: Number(rssiScores.penetration),
         maturiteRSSI: Number(rssiScores.maturite),
         confianceRSSI: Number(rssiScores.confiance),
@@ -137,7 +143,7 @@ const DemandesDashboard = () => {
         donneesPersonnelles: selectedDemande.donneesPersonnelles || "",
         accesFournisseurSystemes: selectedDemande.accesFournisseurSystemes || "",
         produitImpacte: selectedDemande.produitImpacte || "",
-        dependance: selectedDemande.dependance,
+        dependance: Number(rssiScores.dependance),
         penetration: Number(rssiScores.penetration),
         maturite: Number(rssiScores.maturite),
         confiance: Number(rssiScores.confiance),
@@ -146,7 +152,7 @@ const DemandesDashboard = () => {
         riskInterpretation: score?.interpretation,
         riskColor: score?.color,
         fournisseurCritique,
-        strategieExit: selectedDemande.strategieExit || "",
+        strategieExit: strategieExit || selectedDemande.strategieExit || "",
         status: "Actif",
         demandeId: selectedDemande.id,
         demandeurEmail: selectedDemande.emailDemandeur || selectedDemande.demandeurEmail || "",
@@ -210,7 +216,7 @@ const DemandesDashboard = () => {
       <div className="demandes-header">
         <div>
           <h1 className="demandes-title">Demandes Fournisseurs</h1>
-          <p className="demandes-subtitle">Validation et approbation des demandes FM-DS-100</p>
+          <p className="demandes-subtitle">Validation et approbation des demandes fournisseurs</p>
         </div>
       </div>
 
@@ -354,7 +360,7 @@ const DemandesDashboard = () => {
                   <div className="rsb-note">{liveScore.note}</div>
                   <div className="rsb-interp">{liveScore.interpretation}</div>
                   <div className="rsb-formula">
-                    ({selectedDemande.dependance} x {rssiScores.penetration}) / ({rssiScores.maturite} x {rssiScores.confiance})
+                    ({rssiScores.dependance} x {rssiScores.penetration}) / ({rssiScores.maturite} x {rssiScores.confiance})
                   </div>
                 </div>
               )}
@@ -477,15 +483,26 @@ const DemandesDashboard = () => {
                 </div>
               </div>
 
-              {/* RSSI SCORING (only if pending) */}
+              {/* RSSI EVALUATION (only if pending) */}
               {selectedDemande.status === "en_attente_rssi" && (
                 <div className="rssi-scoring-section">
-                  <h3>Ajustement RSSI</h3>
+                  <h3>Evaluation RSSI (EBIOS RM)</h3>
                   <p className="rssi-scoring-hint">
-                    Ajustez les scores si necessaire. La Dependance est fixee par le demandeur.
+                    Evaluez le fournisseur sur les 4 dimensions (echelle 1-4).
                   </p>
 
                   <div className="rssi-score-inputs">
+                    <div className="rssi-input-group">
+                      <label>Dependance <span className="range-hint">(1-4)</span></label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="4"
+                        value={rssiScores.dependance}
+                        onChange={(e) => setRssiScores((p) => ({ ...p, dependance: Number(e.target.value) }))}
+                      />
+                      <span className="rssi-input-value">{rssiScores.dependance}</span>
+                    </div>
                     <div className="rssi-input-group">
                       <label>Penetration <span className="range-hint">(1-4)</span></label>
                       <input
@@ -498,27 +515,37 @@ const DemandesDashboard = () => {
                       <span className="rssi-input-value">{rssiScores.penetration}</span>
                     </div>
                     <div className="rssi-input-group">
-                      <label>Maturite <span className="range-hint">(0-5)</span></label>
+                      <label>Maturite <span className="range-hint">(1-4)</span></label>
                       <input
                         type="range"
-                        min="0"
-                        max="5"
+                        min="1"
+                        max="4"
                         value={rssiScores.maturite}
                         onChange={(e) => setRssiScores((p) => ({ ...p, maturite: Number(e.target.value) }))}
                       />
                       <span className="rssi-input-value">{rssiScores.maturite}</span>
                     </div>
                     <div className="rssi-input-group">
-                      <label>Confiance <span className="range-hint">(1-5)</span></label>
+                      <label>Confiance <span className="range-hint">(1-4)</span></label>
                       <input
                         type="range"
                         min="1"
-                        max="5"
+                        max="4"
                         value={rssiScores.confiance}
                         onChange={(e) => setRssiScores((p) => ({ ...p, confiance: Number(e.target.value) }))}
                       />
                       <span className="rssi-input-value">{rssiScores.confiance}</span>
                     </div>
+                  </div>
+
+                  <div className="rssi-comment-group">
+                    <label>Strategie de sortie</label>
+                    <textarea
+                      value={strategieExit}
+                      onChange={(e) => setStrategieExit(e.target.value)}
+                      placeholder="Decrivez la strategie de sortie : fournisseur de substitution, plan de migration, delais, conditions de reversibilite..."
+                      rows={3}
+                    />
                   </div>
 
                   <div className="rssi-comment-group">

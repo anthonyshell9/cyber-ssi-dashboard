@@ -2,7 +2,9 @@ import React, { useState, useMemo } from "react";
 import "./AjouterFournisseur.css";
 import { db } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-const TOTAL_STEPS = 7;
+import { useNavigate } from "react-router-dom";
+
+const TOTAL_STEPS = 6;
 
 const EQUIPE_OPTIONS = [
   "Developpement/IT",
@@ -48,15 +50,10 @@ const DONNEES_PERSO_OPTIONS = [
 const APPLICATION_ACTIVE_OPTIONS = [
   "Oui",
   "Non",
-  "FOURNISSEUR DE SUBSTITUTION",
+  "Fournisseur de substitution",
 ];
 
-const STRATEGIE_EXIT_OPTIONS = [
-  "Non defini",
-  "Strategie detaillee",
-  "Changement de fournisseur prevu",
-];
-
+// EBIOS RM - Echelles 1-4
 const DEPENDANCE_LEVELS = [
   { value: 1, label: "Faible", desc: "Service non critique, alternatives disponibles" },
   { value: 2, label: "Moderee", desc: "Service utile, remplacement possible sous 3 mois" },
@@ -72,20 +69,17 @@ const PENETRATION_LEVELS = [
 ];
 
 const MATURITE_LEVELS = [
-  { value: 0, label: "Tres faible", desc: "Aucune mesure de securite identifiee" },
   { value: 1, label: "Faible", desc: "Mesures basiques, pas de certification" },
-  { value: 2, label: "En developpement", desc: "Processus en cours de formalisation" },
-  { value: 3, label: "Defini", desc: "Politiques documentees, certifications en cours" },
-  { value: 4, label: "Maitrise", desc: "ISO 27001 ou equivalent, audits reguliers" },
-  { value: 5, label: "Excellent", desc: "Certifications multiples, maturite exemplaire" },
+  { value: 2, label: "Partielle", desc: "Processus en cours de formalisation" },
+  { value: 3, label: "Maitrisee", desc: "Politiques documentees, audits reguliers" },
+  { value: 4, label: "Exemplaire", desc: "Certifications multiples, maturite avancee" },
 ];
 
 const CONFIANCE_LEVELS = [
-  { value: 1, label: "Tres faible", desc: "Fournisseur inconnu, pas de references" },
-  { value: 2, label: "Faible", desc: "Peu de visibilite sur les pratiques" },
-  { value: 3, label: "Moderee", desc: "References correctes, engagement contractuel" },
-  { value: 4, label: "Elevee", desc: "Partenaire reconnu, historique positif" },
-  { value: 5, label: "Tres elevee", desc: "Partenaire strategique, certifie, audite" },
+  { value: 1, label: "Faible", desc: "Fournisseur inconnu, pas de references" },
+  { value: 2, label: "Moderee", desc: "Peu de visibilite, references limitees" },
+  { value: 3, label: "Elevee", desc: "Partenaire reconnu, historique positif" },
+  { value: 4, label: "Tres elevee", desc: "Partenaire strategique, certifie, audite" },
 ];
 
 const stepImages = {
@@ -94,22 +88,20 @@ const stepImages = {
   3: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1920&auto=format&fit=crop",
   4: "https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=1920&auto=format&fit=crop",
   5: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1920&auto=format&fit=crop",
-  6: "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1920&auto=format&fit=crop",
-  7: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=1920&auto=format&fit=crop",
+  6: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=1920&auto=format&fit=crop",
 };
 
 const stepDetails = {
-  1: { title: "Demandeur", subtitle: "Qui effectue la demande ?", icon: "👤" },
-  2: { title: "Fournisseur", subtitle: "Identite du prestataire.", icon: "🏢" },
-  3: { title: "Service", subtitle: "Application & service fourni.", icon: "🛠️" },
-  4: { title: "Donnees", subtitle: "Acces & flux de donnees.", icon: "🔒" },
-  5: { title: "Scoring", subtitle: "Evaluation du risque FM-DS-100.", icon: "📊" },
-  6: { title: "Strategie", subtitle: "Remarques & plan de sortie.", icon: "📋" },
-  7: { title: "Validation", subtitle: "Recapitulatif final.", icon: "✅" },
+  1: { title: "Demandeur", subtitle: "Qui effectue la demande ?", icon: "\u{1F464}" },
+  2: { title: "Fournisseur", subtitle: "Identite du prestataire.", icon: "\u{1F3E2}" },
+  3: { title: "Service", subtitle: "Application & service fourni.", icon: "\u{1F6E0}\uFE0F" },
+  4: { title: "Donnees", subtitle: "Acces & flux de donnees.", icon: "\u{1F512}" },
+  5: { title: "Remarques", subtitle: "Informations complementaires.", icon: "\u{1F4CB}" },
+  6: { title: "Validation", subtitle: "Recapitulatif final.", icon: "\u2705" },
 };
 
 const computeRiskScore = (dep, pen, mat, conf) => {
-  if (mat === 0) return { note: null, interpretation: "Non calculable - Maturite requise", color: "gray" };
+  if (!mat || !conf) return { note: null, interpretation: "Non calculable", color: "gray" };
   const note = (dep * pen) / (mat * conf);
   let interpretation, color;
   if (note < 1) { interpretation = "FAVORABLE"; color = "green"; }
@@ -120,6 +112,7 @@ const computeRiskScore = (dep, pen, mat, conf) => {
 };
 
 const AjouterFournisseur = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
@@ -145,34 +138,15 @@ const AjouterFournisseur = () => {
     accesFournisseurSystemes: "",
     donneesEntrantes: "",
     donneesSortantes: "",
-    actifsBPS: "",
+    actifsCommunicants: "",
     emailFormulaireSecurite: "",
-    // Step 5 - Scoring
-    dependance: "",
-    penetration: "",
-    maturite: "",
-    confiance: "",
-    // Step 6 - Remarques
+    // Step 5 - Remarques
     remarques: "",
-    strategieExit: "",
     pretAEnvoyer: "",
   });
 
-  const riskResult = useMemo(() => {
-    const d = Number(formData.dependance);
-    const p = Number(formData.penetration);
-    const m = Number(formData.maturite);
-    const c = Number(formData.confiance);
-    if (!d || !p || (!m && formData.maturite === "") || !c) return null;
-    return computeRiskScore(d, p, m, c);
-  }, [formData.dependance, formData.penetration, formData.maturite, formData.confiance]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleScoreSelect = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -182,23 +156,17 @@ const AjouterFournisseur = () => {
   };
 
   const requiredFieldsByStep = {
-    1: ["emailDemandeur", "equipUtilisatrice", "detailDemande", "integrationOuRetrait"],
+    1: ["emailDemandeur", "equipUtilisatrice", "integrationOuRetrait"],
     2: ["nomFournisseur", "typePrestataire"],
     3: ["typeServiceMateriel", "applicationActive"],
-    4: ["accesFournisseurSystemes"],
-    5: ["dependance", "penetration", "maturite", "confiance"],
+    4: [],
+    5: [],
     6: [],
-    7: [],
   };
 
   const isStepValid = () => {
     const required = requiredFieldsByStep[step];
-    const allFilled = required.every((f) => formData[f] !== undefined && formData[f].toString().trim() !== "");
-    if (step === 5) {
-      // Maturite can be 0, so check it was explicitly set
-      return allFilled && formData.maturite !== "";
-    }
-    return allFilled;
+    return required.every((f) => formData[f] !== undefined && formData[f].toString().trim() !== "");
   };
 
   const next = () => { if (step < TOTAL_STEPS && isStepValid()) setStep(step + 1); };
@@ -208,21 +176,8 @@ const AjouterFournisseur = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const risk = riskResult || computeRiskScore(
-        Number(formData.dependance),
-        Number(formData.penetration),
-        Number(formData.maturite),
-        Number(formData.confiance)
-      );
       await addDoc(collection(db, "demandes"), {
         ...formData,
-        dependance: Number(formData.dependance),
-        penetration: Number(formData.penetration),
-        maturite: Number(formData.maturite),
-        confiance: Number(formData.confiance),
-        riskNote: risk.note,
-        riskInterpretation: risk.interpretation,
-        riskColor: risk.color,
         status: "en_attente_rssi",
         demandeurEmail: formData.emailDemandeur,
         createdAt: serverTimestamp(),
@@ -241,57 +196,17 @@ const AjouterFournisseur = () => {
     setFormData(Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: "" }), {}));
   };
 
-  const getScoreColorClass = (color) => {
-    if (color === "green") return "risk-favorable";
-    if (color === "amber") return "risk-equilibree";
-    if (color === "orange") return "risk-arisque";
-    if (color === "red") return "risk-critique";
-    return "risk-unknown";
-  };
-
-  const getScoreEmoji = (color) => {
-    if (color === "green") return "🟢";
-    if (color === "amber") return "🟡";
-    if (color === "orange") return "🟠";
-    if (color === "red") return "🔴";
-    return "⚪";
-  };
-
-  const fieldLabels = {
-    emailDemandeur: "Email Demandeur",
-    equipUtilisatrice: "Equipe Utilisatrice",
-    detailDemande: "Detail de la Demande",
-    integrationOuRetrait: "Integration ou Retrait",
-    nomFournisseur: "Nom du Fournisseur",
-    emailFournisseur: "Email Fournisseur",
-    typePrestataire: "Type de Prestataire",
-    produitImpacte: "Produit BPS Impacte",
-    typeServiceMateriel: "Type de Service/Materiel",
-    nomApplication: "Nom de l'Application",
-    applicationActive: "Application Active",
-    donneesPersonnelles: "Donnees Personnelles",
-    accesFournisseurSystemes: "Acces Fournisseur aux Systemes",
-    donneesEntrantes: "Donnees Entrantes",
-    donneesSortantes: "Donnees Sortantes",
-    actifsBPS: "Actifs BPS Communicants",
-    emailFormulaireSecurite: "Email Formulaire Securite",
-    dependance: "Dependance",
-    penetration: "Penetration",
-    maturite: "Maturite",
-    confiance: "Confiance",
-    remarques: "Remarques",
-    strategieExit: "Strategie de Sortie",
-    pretAEnvoyer: "Pret a Envoyer au RSSI",
-  };
-
   if (isSuccess) {
     return (
       <div className="split-layout success-mode">
         <div className="success-content scale-in">
-          <div className="huge-icon">🎉</div>
+          <div className="huge-icon">{"\u{1F389}"}</div>
           <h1>Demande Soumise !</h1>
-          <p>La demande a ete transmise et est en attente de validation par le RSSI.</p>
-          <button className="btn-primary" onClick={resetForm}>Nouvelle Demande</button>
+          <p>Votre demande a ete transmise et est en attente de validation.</p>
+          <div className="success-actions">
+            <button className="btn-primary" onClick={resetForm}>Nouvelle Demande</button>
+            <button className="btn-ghost" onClick={() => navigate("/gestion")}>Retour au tableau de bord</button>
+          </div>
         </div>
       </div>
     );
@@ -322,20 +237,20 @@ const AjouterFournisseur = () => {
       </div>
 
       {/* RIGHT PANEL */}
-      <div className={`right-panel ${step === 5 || step === 7 ? "align-top" : ""}`}>
+      <div className={`right-panel ${step === 6 ? "align-top" : ""}`}>
         <div className="form-container">
           <form onSubmit={handleSubmit}>
             <div key={step} className="form-slide slide-in-up">
 
               {/* HEADER */}
-              {step !== 5 && step !== 7 && (
+              {step !== 6 && (
                 <div className="welcome-header">
                   <h2 className="cyber-brand-title">
-                    FM-DS-100
-                    <span className="title-icon">🛡️</span>
+                    Demande Fournisseur
+                    <span className="title-icon">{"\u{1F6E1}\uFE0F"}</span>
                   </h2>
                   {step === 1 && (
-                    <p className="welcome-msg">Formulaire d'evaluation des fournisseurs ICT - Conforme DORA.</p>
+                    <p className="welcome-msg">Formulaire de referencement et d'evaluation des fournisseurs.</p>
                   )}
                 </div>
               )}
@@ -343,10 +258,10 @@ const AjouterFournisseur = () => {
               {/* STEP 1 - Demandeur */}
               {step === 1 && (
                 <>
-                  <Input label="Email du Demandeur" name="emailDemandeur" type="email" val={formData.emailDemandeur} change={handleChange} placeholder="prenom.nom@bps.lu" autoFocus />
+                  <Input label="Email du Demandeur" name="emailDemandeur" type="email" val={formData.emailDemandeur} change={handleChange} placeholder="prenom.nom@entreprise.com" autoFocus />
                   <Select label="Equipe Utilisatrice" name="equipUtilisatrice" val={formData.equipUtilisatrice} change={handleChange} opts={EQUIPE_OPTIONS} />
-                  <TextArea label="Detail de la Demande" name="detailDemande" val={formData.detailDemande} change={handleChange} placeholder="Expliquez le besoin metier justifiant cette demande..." />
                   <Select label="Integration ou Retrait" name="integrationOuRetrait" val={formData.integrationOuRetrait} change={handleChange} opts={["Integration", "Retrait"]} />
+                  <TextArea label="Detail de la Demande (optionnel)" name="detailDemande" val={formData.detailDemande} change={handleChange} placeholder="Expliquez le besoin metier justifiant cette demande..." />
                 </>
               )}
 
@@ -355,8 +270,8 @@ const AjouterFournisseur = () => {
                 <>
                   <Input label="Nom du Fournisseur" name="nomFournisseur" val={formData.nomFournisseur} change={handleChange} placeholder="Ex: Microsoft Corp" autoFocus />
                   <Input label="Email du Fournisseur" name="emailFournisseur" type="email" val={formData.emailFournisseur} change={handleChange} placeholder="contact@fournisseur.com" />
-                  <Select label="Type de Prestataire ICT" name="typePrestataire" val={formData.typePrestataire} change={handleChange} opts={TYPE_PRESTATAIRE_OPTIONS} />
-                  <Input label="Produit BPS Impacte" name="produitImpacte" val={formData.produitImpacte} change={handleChange} placeholder="Produit ou service BPS concerne..." />
+                  <Select label="Type de Prestataire" name="typePrestataire" val={formData.typePrestataire} change={handleChange} opts={TYPE_PRESTATAIRE_OPTIONS} />
+                  <Input label="Produit / Service Impacte" name="produitImpacte" val={formData.produitImpacte} change={handleChange} placeholder="Produit ou service interne concerne..." />
                 </>
               )}
 
@@ -373,151 +288,33 @@ const AjouterFournisseur = () => {
               {/* STEP 4 - Donnees & Acces */}
               {step === 4 && (
                 <>
-                  <TextArea label="Acces Fournisseur aux Systemes BPS" name="accesFournisseurSystemes" val={formData.accesFournisseurSystemes} change={handleChange} placeholder="Decrivez les acces du fournisseur a vos systemes (VPN, API, Bastion...)" />
+                  <TextArea label="Acces Fournisseur aux Systemes" name="accesFournisseurSystemes" val={formData.accesFournisseurSystemes} change={handleChange} placeholder="Decrivez les acces du fournisseur a vos systemes (VPN, API, Bastion...)" />
                   <TextArea label="Donnees Entrantes" name="donneesEntrantes" val={formData.donneesEntrantes} change={handleChange} placeholder="Description des donnees recues du fournisseur..." />
                   <TextArea label="Donnees Sortantes" name="donneesSortantes" val={formData.donneesSortantes} change={handleChange} placeholder="Description des donnees transmises au fournisseur..." />
-                  <TextArea label="Actifs BPS Communicants" name="actifsBPS" val={formData.actifsBPS} change={handleChange} placeholder="Serveurs, bases, applications communicant avec le fournisseur..." />
+                  <TextArea label="Actifs Communicants" name="actifsCommunicants" val={formData.actifsCommunicants} change={handleChange} placeholder="Serveurs, bases, applications communicant avec le fournisseur..." />
                   <Input label="Email Formulaire Securite" name="emailFormulaireSecurite" type="email" val={formData.emailFormulaireSecurite} change={handleChange} placeholder="security@fournisseur.com" />
                 </>
               )}
 
-              {/* STEP 5 - Scoring Risque */}
+              {/* STEP 5 - Remarques */}
               {step === 5 && (
-                <div className="scoring-wrapper">
-                  <div className="scoring-header">
-                    <h2 className="scoring-title">Evaluation du Risque</h2>
-                    <p className="scoring-subtitle">NOTE = (Dependance x Penetration) / (Maturite x Confiance)</p>
-                  </div>
-
-                  {/* Dependance */}
-                  <div className="score-dimension">
-                    <h3 className="dimension-label">Dependance <span className="dimension-range">(1-4)</span></h3>
-                    <div className="dimension-cards">
-                      {DEPENDANCE_LEVELS.map((level) => (
-                        <div
-                          key={level.value}
-                          className={`dimension-card dep-${level.value} ${Number(formData.dependance) === level.value ? "active" : ""}`}
-                          onClick={() => handleScoreSelect("dependance", level.value)}
-                        >
-                          <div className="dc-value">{level.value}</div>
-                          <div className="dc-label">{level.label}</div>
-                          <div className="dc-desc">{level.desc}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Penetration */}
-                  <div className="score-dimension">
-                    <h3 className="dimension-label">Penetration <span className="dimension-range">(1-4)</span></h3>
-                    <div className="dimension-cards">
-                      {PENETRATION_LEVELS.map((level) => (
-                        <div
-                          key={level.value}
-                          className={`dimension-card pen-${level.value} ${Number(formData.penetration) === level.value ? "active" : ""}`}
-                          onClick={() => handleScoreSelect("penetration", level.value)}
-                        >
-                          <div className="dc-value">{level.value}</div>
-                          <div className="dc-label">{level.label}</div>
-                          <div className="dc-desc">{level.desc}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Maturite */}
-                  <div className="score-dimension">
-                    <h3 className="dimension-label">Maturite <span className="dimension-range">(0-5)</span></h3>
-                    <div className="dimension-cards dimension-cards-6">
-                      {MATURITE_LEVELS.map((level) => (
-                        <div
-                          key={level.value}
-                          className={`dimension-card mat-${level.value} ${formData.maturite !== "" && Number(formData.maturite) === level.value ? "active" : ""}`}
-                          onClick={() => handleScoreSelect("maturite", level.value)}
-                        >
-                          <div className="dc-value">{level.value}</div>
-                          <div className="dc-label">{level.label}</div>
-                          <div className="dc-desc">{level.desc}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Confiance */}
-                  <div className="score-dimension">
-                    <h3 className="dimension-label">Confiance <span className="dimension-range">(1-5)</span></h3>
-                    <div className="dimension-cards dimension-cards-5">
-                      {CONFIANCE_LEVELS.map((level) => (
-                        <div
-                          key={level.value}
-                          className={`dimension-card conf-${level.value} ${Number(formData.confiance) === level.value ? "active" : ""}`}
-                          onClick={() => handleScoreSelect("confiance", level.value)}
-                        >
-                          <div className="dc-value">{level.value}</div>
-                          <div className="dc-label">{level.label}</div>
-                          <div className="dc-desc">{level.desc}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Live Risk Score */}
-                  <div className="risk-result-box">
-                    {riskResult ? (
-                      riskResult.note !== null ? (
-                        <div className={`risk-display ${getScoreColorClass(riskResult.color)}`}>
-                          <div className="risk-emoji">{getScoreEmoji(riskResult.color)}</div>
-                          <div className="risk-note">{riskResult.note}</div>
-                          <div className="risk-interpretation">{riskResult.interpretation}</div>
-                          <div className="risk-formula">
-                            ({formData.dependance} x {formData.penetration}) / ({formData.maturite} x {formData.confiance})
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="risk-display risk-unknown">
-                          <div className="risk-emoji">⚠️</div>
-                          <div className="risk-interpretation">{riskResult.interpretation}</div>
-                        </div>
-                      )
-                    ) : (
-                      <div className="risk-display risk-pending">
-                        <div className="risk-emoji">⏳</div>
-                        <div className="risk-interpretation">Selectionnez les 4 criteres pour calculer la note</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 6 - Remarques & Strategie */}
-              {step === 6 && (
                 <>
                   <TextArea label="Remarques" name="remarques" val={formData.remarques} change={handleChange} placeholder="Commentaires additionnels, contexte, precisions..." />
-                  <Select label="Strategie de Sortie" name="strategieExit" val={formData.strategieExit} change={handleChange} opts={STRATEGIE_EXIT_OPTIONS} />
-                  <Select label="Pret a Envoyer au RSSI ?" name="pretAEnvoyer" val={formData.pretAEnvoyer} change={handleChange} opts={["Oui", "Non"]} />
+                  <Select label="Pret a envoyer ?" name="pretAEnvoyer" val={formData.pretAEnvoyer} change={handleChange} opts={["Oui", "Non"]} />
                 </>
               )}
 
-              {/* STEP 7 - Recapitulatif */}
-              {step === 7 && (
+              {/* STEP 6 - Recapitulatif */}
+              {step === 6 && (
                 <div className="recap-wrapper">
                   <h2 className="recap-main-title">Recapitulatif de la Demande</h2>
-
-                  {/* Risk Score Prominent */}
-                  {riskResult && riskResult.note !== null && (
-                    <div className={`recap-risk-banner ${getScoreColorClass(riskResult.color)}`}>
-                      <span className="recap-risk-emoji">{getScoreEmoji(riskResult.color)}</span>
-                      <span className="recap-risk-note">NOTE : {riskResult.note}</span>
-                      <span className="recap-risk-label">{riskResult.interpretation}</span>
-                    </div>
-                  )}
 
                   <div className="recap-sections">
                     <RecapSection title="Demandeur" fields={[
                       { key: "emailDemandeur", label: "Email" },
                       { key: "equipUtilisatrice", label: "Equipe" },
-                      { key: "detailDemande", label: "Detail" },
                       { key: "integrationOuRetrait", label: "Type" },
+                      { key: "detailDemande", label: "Detail" },
                     ]} data={formData} />
                     <RecapSection title="Fournisseur" fields={[
                       { key: "nomFournisseur", label: "Nom" },
@@ -535,18 +332,11 @@ const AjouterFournisseur = () => {
                       { key: "accesFournisseurSystemes", label: "Acces Systemes" },
                       { key: "donneesEntrantes", label: "Donnees Entrantes" },
                       { key: "donneesSortantes", label: "Donnees Sortantes" },
-                      { key: "actifsBPS", label: "Actifs BPS" },
+                      { key: "actifsCommunicants", label: "Actifs Communicants" },
                       { key: "emailFormulaireSecurite", label: "Email Securite" },
                     ]} data={formData} />
-                    <RecapSection title="Scoring Risque" fields={[
-                      { key: "dependance", label: "Dependance" },
-                      { key: "penetration", label: "Penetration" },
-                      { key: "maturite", label: "Maturite" },
-                      { key: "confiance", label: "Confiance" },
-                    ]} data={formData} />
-                    <RecapSection title="Strategie" fields={[
+                    <RecapSection title="Remarques" fields={[
                       { key: "remarques", label: "Remarques" },
-                      { key: "strategieExit", label: "Strategie Exit" },
                       { key: "pretAEnvoyer", label: "Pret a Envoyer" },
                     ]} data={formData} />
                   </div>
@@ -560,7 +350,7 @@ const AjouterFournisseur = () => {
                 <button type="button" className="btn-ghost" onClick={prev}>Retour</button>
               ) : <div></div>}
               {step < TOTAL_STEPS ? (
-                <button type="button" className="btn-primary" disabled={!isStepValid()} onClick={next}>Continuer →</button>
+                <button type="button" className="btn-primary" disabled={!isStepValid()} onClick={next}>Continuer {"\u2192"}</button>
               ) : (
                 <button type="submit" className="btn-submit" disabled={loading}>
                   {loading ? "Envoi en cours..." : "Soumettre la Demande"}
@@ -606,7 +396,7 @@ const RecapSection = ({ title, fields, data }) => (
       {fields.map(({ key, label }) => (
         <div key={key} className="recap-item">
           <label>{label}</label>
-          <span>{data[key] !== "" && data[key] !== undefined ? String(data[key]) : "—"}</span>
+          <span>{data[key] !== "" && data[key] !== undefined ? String(data[key]) : "\u2014"}</span>
         </div>
       ))}
     </div>

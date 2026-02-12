@@ -275,6 +275,9 @@ button { cursor: pointer; border: none; font-family: inherit; transition: 0.3s; 
 .huge-icon { font-size: 8rem; margin-bottom: 30px; animation: bounce 2s infinite; filter: drop-shadow(0 0 20px var(--neon-purple)); opacity: 0.9; }
 .success-content h1 { font-size: 3.5rem; margin-bottom: 20px; background: var(--grad-cyber); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .success-content p { color: var(--text-muted); font-size: 1.2rem; margin-bottom: 30px; }
+.success-actions { display: flex; gap: 15px; justify-content: center; flex-wrap: wrap; }
+.success-actions .btn-ghost { border: 1px solid var(--border-light); color: var(--text-muted); padding: 14px 28px; border-radius: 10px; cursor: pointer; font-size: 1rem; background: transparent; transition: 0.3s; }
+.success-actions .btn-ghost:hover { color: white; border-color: var(--neon-cyan); }
 
 /* TOAST */
 .toast { position: fixed; top: 20px; right: 20px; z-index: 10000; padding: 14px 24px; border-radius: 10px; font-weight: 600; font-size: 0.95rem; animation: slideInRight 0.3s ease; }
