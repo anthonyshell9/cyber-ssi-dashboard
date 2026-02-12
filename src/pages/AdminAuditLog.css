@@ -1,0 +1,278 @@
+/* ===================================================================
+   ADMIN AUDIT LOG - Audit Trail Page
+=================================================================== */
+
+.audit-log {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Loading */
+.audit-log-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  color: #94a3b8;
+}
+
+.audit-log-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(6, 182, 212, 0.2);
+  border-top-color: #06b6d4;
+  border-radius: 50%;
+  animation: al-spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes al-spin {
+  100% { transform: rotate(360deg); }
+}
+
+/* ===================================================================
+   KPI CARDS
+=================================================================== */
+.audit-log-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.al-kpi-card {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.2s;
+}
+
+.al-kpi-card:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(30, 41, 59, 0.7);
+}
+
+.al-kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.al-kpi-total .al-kpi-icon {
+  background: rgba(6, 182, 212, 0.15);
+}
+
+.al-kpi-today .al-kpi-icon {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.al-kpi-week .al-kpi-icon {
+  background: rgba(139, 92, 246, 0.15);
+}
+
+.al-kpi-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.al-kpi-value {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #f8fafc;
+  line-height: 1;
+}
+
+.al-kpi-label {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* ===================================================================
+   TOOLBAR / FILTER
+=================================================================== */
+.audit-log-toolbar {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.audit-log-filter {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  min-width: 220px;
+  transition: border-color 0.2s;
+}
+
+.audit-log-filter:focus {
+  border-color: rgba(6, 182, 212, 0.5);
+}
+
+.audit-log-filter option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+/* ===================================================================
+   TABLE
+=================================================================== */
+.audit-log-table-wrapper {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.audit-log-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.audit-log-table thead {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+.audit-log-table th {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #64748b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.audit-log-table td {
+  padding: 14px 16px;
+  font-size: 0.875rem;
+  color: #cbd5e1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.audit-log-table tbody tr {
+  transition: background 0.15s;
+}
+
+.audit-log-table tbody tr:hover {
+  background: rgba(6, 182, 212, 0.04);
+}
+
+.audit-log-table .cell-email {
+  font-weight: 500;
+  color: #e2e8f0;
+}
+
+.audit-log-table .cell-date {
+  color: #64748b;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.audit-log-table .cell-details {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-log-table .empty-row {
+  text-align: center;
+  color: #475569;
+  padding: 40px 16px !important;
+  font-style: italic;
+}
+
+/* ===================================================================
+   ACTION BADGES
+=================================================================== */
+.action-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-green {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+
+.badge-cyan {
+  background: rgba(6, 182, 212, 0.15);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.25);
+}
+
+.badge-red {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.badge-purple {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+
+.badge-amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.badge-default {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+}
+
+/* ===================================================================
+   RESPONSIVE
+=================================================================== */
+@media (max-width: 1024px) {
+  .audit-log-kpis {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .audit-log {
+    padding: 0;
+  }
+
+  .audit-log-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-log-table-wrapper {
+    overflow-x: auto;
+  }
+}

@@ -30,3 +30,7 @@ export const googleProvider = new GoogleAuthProvider();
 setPersistence(auth, browserSessionPersistence).catch((error) => {
   console.warn("Erreur de persistance :", error.code);
 });
+
+// Secondary app for admin user creation (avoids signing out current admin)
+const secondaryApp = initializeApp(firebaseConfig, "secondaryApp");
+export const secondaryAuth = getAuth(secondaryApp);

@@ -5,8 +5,8 @@ import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const UserContext = createContext();
 
-// Admin/RSSI emails that get elevated role on first login
-const RSSI_EMAILS = ["ahassen@cyber-ssi.com"];
+// Admin emails that get elevated role on first login
+const ADMIN_EMAILS = ["ahassen@cyber-ssi.com"];
 
 export const UserProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -23,13 +23,13 @@ export const UserProvider = ({ children }) => {
           if (profileSnap.exists()) {
             setUserProfile({ id: profileSnap.id, ...profileSnap.data() });
           } else {
-            // Auto-create profile - RSSI for admin emails, demandeur for others
-            const isRssi = RSSI_EMAILS.includes(firebaseUser.email?.toLowerCase());
+            // Auto-create profile - admin for admin emails, demandeur for others
+            const isAdmin = ADMIN_EMAILS.includes(firebaseUser.email?.toLowerCase());
             const newProfile = {
               email: firebaseUser.email,
               displayName: firebaseUser.displayName || firebaseUser.email.split("@")[0],
-              role: isRssi ? "rssi" : "demandeur",
-              department: isRssi ? "Securite" : "",
+              role: isAdmin ? "admin" : "demandeur",
+              department: isAdmin ? "Securite" : "",
               createdAt: serverTimestamp(),
             };
             await setDoc(profileRef, newProfile);

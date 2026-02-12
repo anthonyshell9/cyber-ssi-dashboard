@@ -29,6 +29,10 @@ import AuditProgram from "./pages/AuditProgram.jsx";
 import SlaMonitoring from "./pages/SlaMonitoring.jsx";
 import SoaDashboard from "./pages/SoaDashboard.jsx";
 import Evaluations from "./pages/Evaluations.jsx";
+import AdminParametres from "./pages/AdminParametres.jsx";
+import AdminUtilisateurs from "./pages/AdminUtilisateurs.jsx";
+import AdminLayout from "./pages/AdminLayout.jsx";
+import AdminAuditLog from "./pages/AdminAuditLog.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 import "./App.css";
@@ -142,6 +146,11 @@ function App() {
           {/* DEMANDES / WORKFLOW */}
           <Route path="/demandes" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><DemandesDashboard /></DashboardLayout></ProtectedRoute>} />
           <Route path="/mes-demandes" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><MesDemandes /></DashboardLayout></ProtectedRoute>} />
+
+          {/* ADMIN */}
+          <Route path="/admin/utilisateurs" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><AdminLayout><AdminUtilisateurs /></AdminLayout></DashboardLayout></ProtectedRoute>} />
+          <Route path="/admin/parametres" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><AdminLayout><AdminParametres /></AdminLayout></DashboardLayout></ProtectedRoute>} />
+          <Route path="/admin/audit" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><AdminLayout><AdminAuditLog /></AdminLayout></DashboardLayout></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

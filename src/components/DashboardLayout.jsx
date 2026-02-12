@@ -52,9 +52,10 @@ const menuSections = [
 ];
 
 const ROLE_LABELS = {
-  rssi: "RSSI",
   admin: "Administrateur",
+  evaluateur: "Evaluateur",
   demandeur: "Demandeur",
+  rssi: "Evaluateur",
 };
 
 const DashboardLayout = ({ children, setConnectedUser }) => {
@@ -65,7 +66,8 @@ const DashboardLayout = ({ children, setConnectedUser }) => {
   const [pendingCount, setPendingCount] = useState(0);
 
   const role = userProfile?.role || "demandeur";
-  const isRssiOrAdmin = role === "rssi" || role === "admin";
+  const isRssiOrAdmin = role === "rssi" || role === "admin" || role === "evaluateur";
+  const isAdmin = role === "admin";
 
   // Live count of pending demandes
   useEffect(() => {
@@ -98,7 +100,7 @@ const DashboardLayout = ({ children, setConnectedUser }) => {
 
     if (isRssiOrAdmin) {
       roleItems.push({
-        title: "Administration",
+        title: "Demandes",
         items: [
           {
             label: "Demandes en attente",
@@ -111,8 +113,21 @@ const DashboardLayout = ({ children, setConnectedUser }) => {
       });
     }
 
+    if (isAdmin) {
+      roleItems.push({
+        title: "Administration",
+        items: [
+          {
+            label: "Administration",
+            path: "/admin/utilisateurs",
+            icon: "\u2699",
+          },
+        ],
+      });
+    }
+
     return [...sections, ...roleItems];
-  }, [role, isRssiOrAdmin, pendingCount]);
+  }, [role, isRssiOrAdmin, isAdmin, pendingCount]);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -120,6 +135,9 @@ const DashboardLayout = ({ children, setConnectedUser }) => {
   };
 
   const isActive = (path) => {
+    if (path === "/admin/utilisateurs") {
+      return location.pathname.startsWith("/admin");
+    }
     return location.pathname === path;
   };
 

@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { useUser } from "../hooks/UserContext";
 import { useNotification } from "../hooks/NotificationContext";
+import { useNavigate } from "react-router-dom";
 import "./DemandesDashboard.css";
 
 const STATUS_LABELS = {
@@ -41,6 +42,7 @@ const computeRiskScore = (dep, pen, mat, conf) => {
 const DemandesDashboard = () => {
   const { userProfile } = useUser();
   const { addNotification } = useNotification();
+  const navigate = useNavigate();
   const [demandes, setDemandes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
@@ -215,6 +217,7 @@ const DemandesDashboard = () => {
       {/* HEADER */}
       <div className="demandes-header">
         <div>
+          <button className="demandes-btn-back" onClick={() => navigate("/gestion")}>&larr; Retour</button>
           <h1 className="demandes-title">Demandes Fournisseurs</h1>
           <p className="demandes-subtitle">Validation et approbation des demandes fournisseurs</p>
         </div>

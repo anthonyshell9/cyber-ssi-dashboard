@@ -32,6 +32,24 @@
   100% { transform: rotate(360deg); }
 }
 
+/* Back button */
+.demandes-btn-back {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-bottom: 10px;
+}
+.demandes-btn-back:hover {
+  color: #f0f4f8;
+  border-color: #06b6d4;
+}
+
 /* Header */
 .demandes-header {
   margin-bottom: 28px;

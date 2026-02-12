@@ -59,6 +59,7 @@ const MesDemandes = () => {
       {/* HEADER */}
       <div className="md-header">
         <div>
+          <button className="md-btn-back" onClick={() => navigate("/gestion")}>&larr; Retour</button>
           <h1 className="md-title">Mes Demandes</h1>
           <p className="md-subtitle">Suivi de vos demandes de referencement fournisseur</p>
         </div>

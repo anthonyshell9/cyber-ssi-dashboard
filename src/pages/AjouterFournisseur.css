@@ -84,6 +84,19 @@
   padding-top: 40px;
 }
 
+/* CANCEL BAR */
+.form-cancel-bar {
+  display: flex; justify-content: flex-end; margin-bottom: 10px;
+}
+.btn-cancel-link {
+  background: transparent; color: var(--text-muted); font-size: 0.85rem;
+  font-weight: 600; padding: 6px 14px; border: 1px solid var(--border-light);
+  border-radius: 8px; cursor: pointer; transition: all 0.3s;
+}
+.btn-cancel-link:hover {
+  color: var(--text-white); border-color: var(--neon-cyan);
+}
+
 .form-container { width: 100%; max-width: 700px; }
 .form-slide { animation: fadeInUp 0.5s ease forwards; min-height: 450px; display: flex; flex-direction: column; justify-content: center; }
 

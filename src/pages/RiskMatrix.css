@@ -1,5 +1,5 @@
 /* ===================================================================
-   RISK MATRIX - ISO 27001 Risk Assessment
+   RISK MATRIX - EBIOS RM - Evaluation des parties prenantes
 =================================================================== */
 .risk-matrix-page {
   min-height: 100vh;
@@ -44,7 +44,7 @@
 
 /* KPI CARDS */
 .risk-kpi-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; margin-bottom: 30px;
 }
 
 .risk-kpi-card {
@@ -68,8 +68,8 @@
 
 .kpi-critical .kpi-icon { background: rgba(239,68,68,0.15); }
 .kpi-critical .kpi-value { color: #ef4444; }
-.kpi-high .kpi-icon { background: rgba(245,158,11,0.15); }
-.kpi-high .kpi-value { color: #f59e0b; }
+.kpi-high .kpi-icon { background: rgba(249,115,22,0.15); }
+.kpi-high .kpi-value { color: #f97316; }
 .kpi-medium .kpi-icon { background: rgba(234,179,8,0.15); }
 .kpi-medium .kpi-value { color: #eab308; }
 .kpi-low .kpi-icon { background: rgba(16,185,129,0.15); }
@@ -89,8 +89,8 @@
 
 .matrix-wrapper {
   display: grid;
-  grid-template-columns: 40px repeat(5, 1fr);
-  grid-template-rows: repeat(5, 1fr) 40px;
+  grid-template-columns: 50px repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr) 40px;
   gap: 4px;
   max-width: 800px;
   margin: 0 auto;
@@ -120,29 +120,25 @@
   box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
-.matrix-cell .cell-score {
-  font-size: 1.4rem; font-weight: 800; color: rgba(0,0,0,0.7);
+.matrix-cell .cell-risk-label {
+  font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.8);
+  text-transform: uppercase; letter-spacing: 0.5px;
 }
 
 .matrix-cell .cell-count {
-  font-size: 0.7rem; font-weight: 700; color: rgba(0,0,0,0.6);
-  background: rgba(255,255,255,0.3); padding: 2px 8px; border-radius: 10px; margin-top: 4px;
+  font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.9);
+  background: rgba(0,0,0,0.25); padding: 2px 8px; border-radius: 10px; margin-top: 4px;
 }
 
-.cell-green { background: #10b981; }
-.cell-yellow { background: #eab308; }
-.cell-orange { background: #f59e0b; }
-.cell-red { background: #ef4444; }
+.cell-green { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.3); }
+.cell-yellow { background: rgba(234, 179, 8, 0.2); border: 1px solid rgba(234, 179, 8, 0.3); }
+.cell-orange { background: rgba(249, 115, 22, 0.2); border: 1px solid rgba(249, 115, 22, 0.3); }
+.cell-red { background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); }
 
-/* AXIS LABELS */
-.matrix-axis-labels {
-  display: flex; justify-content: space-between; max-width: 800px; margin: 10px auto 0;
-}
-
-.axis-x-title, .axis-y-title {
-  font-size: 0.8rem; color: #06b6d4; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 2px;
-}
+.cell-green:hover { background: rgba(16, 185, 129, 0.35); }
+.cell-yellow:hover { background: rgba(234, 179, 8, 0.35); }
+.cell-orange:hover { background: rgba(249, 115, 22, 0.35); }
+.cell-red:hover { background: rgba(239, 68, 68, 0.35); }
 
 /* VENDOR POPUP */
 .matrix-popup-overlay {
@@ -179,6 +175,15 @@
 .matrix-popup .vendor-name { font-weight: 600; }
 .matrix-popup .vendor-type { font-size: 0.8rem; color: #94a3b8; }
 
+.matrix-popup .vendor-dimensions {
+  display: flex; gap: 4px;
+}
+
+.matrix-popup .dim-badge {
+  font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  background: rgba(255,255,255,0.08); color: #94a3b8;
+}
+
 .matrix-popup .btn-close-popup {
   margin-top: 20px; width: 100%; padding: 12px; border-radius: 8px;
   background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3);
@@ -204,5 +209,5 @@
   .risk-kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .matrix-wrapper { max-width: 100%; }
   .matrix-cell { min-height: 60px; padding: 6px; }
-  .matrix-cell .cell-score { font-size: 1rem; }
+  .matrix-cell .cell-risk-label { font-size: 0.6rem; }
 }

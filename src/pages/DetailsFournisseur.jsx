@@ -98,20 +98,36 @@ const DetailsFournisseur = () => {
     setNewIncident({ titre: "", gravite: "Majeur", statut: "En cours", impact: "", date: "" });
   };
 
-  // EVALUATION - Appliquer les scores et sauvegarder en base
+  // EVALUATION - Appliquer les scores EBIOS RM et sauvegarder en base
   const handleApplyEvaluation = async (scores) => {
     const ref = doc(db, "fournisseurs", id);
     await updateDoc(ref, {
-      niveauConfiance: scores.niveauConfiance,
-      niveauDependance: scores.niveauDependance,
-      niveauMaturite: scores.niveauMaturite,
-      doraReadiness: scores.doraReadiness,
-      isoMaturity: scores.isoMaturity,
+      dependance: scores.dependance,
+      penetration: scores.penetration,
+      maturite: scores.maturite,
+      confiance: scores.confiance,
+      niveauConfiance: scores.confiance,
+      niveauDependance: scores.dependance,
+      riskNote: scores.riskNote,
+      riskInterpretation: scores.riskInterpretation,
+      riskColor: scores.riskColor,
       lastEvaluation: new Date().toISOString(),
     });
-    setFournisseur(prev => ({ ...prev, ...scores, lastEvaluation: new Date().toISOString() }));
+    setFournisseur(prev => ({
+      ...prev,
+      dependance: scores.dependance,
+      penetration: scores.penetration,
+      maturite: scores.maturite,
+      confiance: scores.confiance,
+      niveauConfiance: scores.confiance,
+      niveauDependance: scores.dependance,
+      riskNote: scores.riskNote,
+      riskInterpretation: scores.riskInterpretation,
+      riskColor: scores.riskColor,
+      lastEvaluation: new Date().toISOString(),
+    }));
     setShowScoreCalc(false);
-    addNotification("success", "Evaluation enregistree. Scores DORA + ISO mis a jour.");
+    addNotification("success", "Evaluation EBIOS RM enregistree.");
   };
 
   if (loading) return <div className="loader-screen"><div className="spinner"></div>Chargement...</div>;
@@ -144,7 +160,7 @@ const DetailsFournisseur = () => {
         {activeTab === 'general' && (
           <div className="tab-panel fade-in">
              <div className="info-grid">
-                <div className="card-glass"><h3>Scores</h3><div className="score-big" style={{color: Number(fournisseur.niveauConfiance) > 3 ? '#10b981' : '#f59e0b'}}>{fournisseur.niveauConfiance}/5</div></div>
+                <div className="card-glass"><h3>Risque EBIOS</h3><div className="score-big" style={{color: fournisseur.riskColor === 'green' ? '#10b981' : fournisseur.riskColor === 'yellow' ? '#eab308' : fournisseur.riskColor === 'orange' ? '#f97316' : fournisseur.riskColor === 'red' ? '#ef4444' : '#64748b'}}>{fournisseur.riskInterpretation || 'Non evalue'}</div></div>
                 <div className="card-glass full-width"><h3>Mission</h3><p><strong>Service :</strong> {fournisseur.typeServiceMateriel}</p><p><strong>Données :</strong> {fournisseur.accesDonneesPersonnelles}</p></div>
              </div>
              <div className="actions-footer"><button onClick={() => navigate(`/modifier/${id}`)} className="btn-edit-large">✏️ Modifier</button></div>
@@ -238,26 +254,40 @@ const DetailsFournisseur = () => {
           </div>
         )}
 
-        {/* ONGLET 5 : EVALUATION DORA + ISO 27001 */}
+        {/* ONGLET 5 : EVALUATION EBIOS RM */}
         {activeTab === 'evaluation' && (
           <div className="tab-panel fade-in">
-            {/* Scores actuels */}
+            {/* 4 dimension cards */}
             <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '15px', marginBottom: '25px'}}>
               <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '20px', textAlign: 'center'}}>
-                <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>Confiance</div>
-                <div style={{fontSize: '2rem', fontWeight: 'bold', color: Number(fournisseur.niveauConfiance) >= 4 ? '#10b981' : Number(fournisseur.niveauConfiance) >= 3 ? '#f59e0b' : '#ef4444'}}>{fournisseur.niveauConfiance || '—'}/5</div>
-              </div>
-              <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '20px', textAlign: 'center'}}>
                 <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>Dependance</div>
-                <div style={{fontSize: '2rem', fontWeight: 'bold', color: Number(fournisseur.niveauDependance) <= 2 ? '#10b981' : '#f59e0b'}}>{fournisseur.niveauDependance || '—'}/4</div>
+                <div style={{fontSize: '2rem', fontWeight: 'bold', color: (() => { const v = Number(fournisseur.dependance) || Number(fournisseur.niveauDependance); if (!v) return '#64748b'; if (v <= 1) return '#10b981'; if (v <= 2) return '#eab308'; if (v <= 3) return '#f97316'; return '#ef4444'; })()}}>{(fournisseur.dependance || fournisseur.niveauDependance) || '—'}/4</div>
               </div>
               <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '20px', textAlign: 'center'}}>
-                <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>DORA Readiness</div>
-                <div style={{fontSize: '2rem', fontWeight: 'bold', color: Number(fournisseur.doraReadiness) >= 70 ? '#10b981' : Number(fournisseur.doraReadiness) >= 40 ? '#f59e0b' : '#ef4444'}}>{fournisseur.doraReadiness || '—'}%</div>
+                <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>Penetration</div>
+                <div style={{fontSize: '2rem', fontWeight: 'bold', color: (() => { const v = Number(fournisseur.penetration); if (!v) return '#64748b'; if (v <= 1) return '#10b981'; if (v <= 2) return '#eab308'; if (v <= 3) return '#f97316'; return '#ef4444'; })()}}>{fournisseur.penetration || '—'}/4</div>
               </div>
               <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '20px', textAlign: 'center'}}>
-                <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>ISO 27001 Maturite</div>
-                <div style={{fontSize: '2rem', fontWeight: 'bold', color: Number(fournisseur.isoMaturity) >= 4 ? '#10b981' : Number(fournisseur.isoMaturity) >= 3 ? '#f59e0b' : '#ef4444'}}>{fournisseur.isoMaturity || '—'}/5</div>
+                <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>Maturite</div>
+                <div style={{fontSize: '2rem', fontWeight: 'bold', color: (() => { const v = Number(fournisseur.maturite) || Number(fournisseur.niveauMaturite); if (!v) return '#64748b'; if (v >= 4) return '#10b981'; if (v >= 3) return '#eab308'; if (v >= 2) return '#f97316'; return '#ef4444'; })()}}>{(fournisseur.maturite || fournisseur.niveauMaturite) || '—'}/4</div>
+              </div>
+              <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '20px', textAlign: 'center'}}>
+                <div style={{color: '#94a3b8', fontSize: '0.8rem', marginBottom: '5px'}}>Confiance</div>
+                <div style={{fontSize: '2rem', fontWeight: 'bold', color: (() => { const v = Number(fournisseur.confiance) || Number(fournisseur.niveauConfiance); if (!v) return '#64748b'; if (v >= 4) return '#10b981'; if (v >= 3) return '#eab308'; if (v >= 2) return '#f97316'; return '#ef4444'; })()}}>{(fournisseur.confiance || fournisseur.niveauConfiance) || '—'}/4</div>
+              </div>
+            </div>
+
+            {/* Risk result box */}
+            <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '10px', padding: '25px', marginBottom: '25px', textAlign: 'center'}}>
+              <div style={{fontSize: '0.85rem', color: '#94a3b8', marginBottom: '10px'}}>Resultat EBIOS RM</div>
+              <div style={{fontSize: '2.5rem', fontWeight: 'bold', color: fournisseur.riskColor === 'green' ? '#10b981' : fournisseur.riskColor === 'yellow' ? '#eab308' : fournisseur.riskColor === 'orange' ? '#f97316' : fournisseur.riskColor === 'red' ? '#ef4444' : '#64748b', marginBottom: '5px'}}>
+                {fournisseur.riskNote != null ? fournisseur.riskNote : '—'}
+              </div>
+              <div style={{fontSize: '1.1rem', fontWeight: 'bold', color: fournisseur.riskColor === 'green' ? '#10b981' : fournisseur.riskColor === 'yellow' ? '#eab308' : fournisseur.riskColor === 'orange' ? '#f97316' : fournisseur.riskColor === 'red' ? '#ef4444' : '#64748b'}}>
+                {fournisseur.riskInterpretation || 'Non evalue'}
+              </div>
+              <div style={{fontSize: '0.8rem', color: '#64748b', marginTop: '10px'}}>
+                Formule : (Dependance x Penetration) / (Maturite x Confiance)
               </div>
             </div>
 
@@ -275,9 +305,8 @@ const DetailsFournisseur = () => {
                 padding: '14px 30px', borderRadius: '8px', fontSize: '1.05rem', fontWeight: 'bold',
                 cursor: 'pointer', boxShadow: '0 0 20px rgba(6, 182, 212, 0.4)'
               }}>
-                {fournisseur.lastEvaluation ? 'Re-evaluer ce fournisseur' : 'Lancer la premiere evaluation'}
+                {fournisseur.lastEvaluation ? 'Re-evaluer (EBIOS RM)' : "Lancer l'evaluation EBIOS RM"}
               </button>
-              <p style={{color: '#94a3b8', fontSize: '0.8rem', marginTop: '10px'}}>Questionnaire DORA + ISO 27001 : certifications, RGPD, continuite, incidents...</p>
             </div>
 
             {/* Modal ScoreCalculator */}

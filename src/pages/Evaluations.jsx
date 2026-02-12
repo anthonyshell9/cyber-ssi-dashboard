@@ -8,11 +8,47 @@ import "./Evaluations.css";
 const EXPORT_COLUMNS = [
   { key: 'nomFournisseur', label: 'Fournisseur' },
   { key: 'typePrestataire', label: 'Type' },
-  { key: 'niveauConfiance', label: 'Confiance' },
-  { key: 'doraReadiness', label: 'DORA %' },
-  { key: 'isoMaturity', label: 'ISO Maturite' },
+  { key: 'dependance', label: 'Dependance' },
+  { key: 'penetration', label: 'Penetration' },
+  { key: 'maturite', label: 'Maturite' },
+  { key: 'confiance', label: 'Confiance' },
+  { key: 'riskNote', label: 'Note Risque' },
+  { key: 'riskInterpretation', label: 'Interpretation' },
   { key: 'lastEvaluation', label: 'Derniere Evaluation' },
 ];
+
+const computeRiskScore = (dep, pen, mat, conf) => {
+  if (!mat || !conf) return { note: null, interpretation: "Non evalue", color: "gray" };
+  const note = (dep * pen) / (mat * conf);
+  if (note < 1) return { note: Math.round(note * 100) / 100, interpretation: "FAVORABLE", color: "green" };
+  if (note === 1) return { note: 1, interpretation: "EQUILIBREE", color: "yellow" };
+  if (note <= 2) return { note: Math.round(note * 100) / 100, interpretation: "A RISQUE", color: "orange" };
+  return { note: Math.round(note * 100) / 100, interpretation: "CRITIQUE", color: "red" };
+};
+
+const getExposureColor = (val) => {
+  if (!val) return '#64748b';
+  if (val <= 1) return '#10b981';
+  if (val <= 2) return '#eab308';
+  if (val <= 3) return '#f97316';
+  return '#ef4444';
+};
+
+const getReliabilityColor = (val) => {
+  if (!val) return '#64748b';
+  if (val >= 4) return '#10b981';
+  if (val >= 3) return '#eab308';
+  if (val >= 2) return '#f97316';
+  return '#ef4444';
+};
+
+const getRiskDisplayColor = (color) => {
+  if (color === 'green') return '#10b981';
+  if (color === 'yellow') return '#eab308';
+  if (color === 'orange') return '#f97316';
+  if (color === 'red') return '#ef4444';
+  return '#64748b';
+};
 
 const Evaluations = () => {
   const [fournisseurs, setFournisseurs] = useState([]);
@@ -38,33 +74,32 @@ const Evaluations = () => {
     return "ok";
   };
 
-  const getDoraColor = (score) => {
-    if (!score) return '#64748b';
-    if (score >= 70) return '#10b981';
-    if (score >= 40) return '#f59e0b';
-    return '#ef4444';
-  };
+  const enriched = fournisseurs.map(f => {
+    const dep = Number(f.dependance) || Number(f.niveauDependance) || null;
+    const pen = Number(f.penetration) || null;
+    const mat = Number(f.maturite) || Number(f.niveauMaturite) || null;
+    const conf = Number(f.confiance) || Number(f.niveauConfiance) || null;
+    const risk = (dep && pen && mat && conf)
+      ? computeRiskScore(dep, pen, mat, conf)
+      : { note: null, interpretation: "Non evalue", color: "gray" };
+    return { ...f, dep, pen, mat, conf, risk };
+  });
 
-  const getConfColor = (score) => {
-    if (!score) return '#64748b';
-    if (score >= 4) return '#10b981';
-    if (score >= 3) return '#f59e0b';
-    return '#ef4444';
-  };
-
-  const filtered = fournisseurs.filter(f => {
+  const filtered = enriched.filter(f => {
     if (filter === "all") return true;
-    return getEvalStatus(f) === filter;
+    if (filter === "FAVORABLE") return f.risk.interpretation === "FAVORABLE";
+    if (filter === "EQUILIBREE") return f.risk.interpretation === "EQUILIBREE";
+    if (filter === "A RISQUE") return f.risk.interpretation === "A RISQUE";
+    if (filter === "CRITIQUE") return f.risk.interpretation === "CRITIQUE";
+    return true;
   });
 
   const stats = {
     total: fournisseurs.length,
-    evaluated: fournisseurs.filter(f => f.lastEvaluation).length,
-    missing: fournisseurs.filter(f => !f.lastEvaluation).length,
-    expired: fournisseurs.filter(f => getEvalStatus(f) === "expired").length,
-    avgDora: fournisseurs.filter(f => f.doraReadiness).length > 0
-      ? Math.round(fournisseurs.filter(f => f.doraReadiness).reduce((s, f) => s + Number(f.doraReadiness), 0) / fournisseurs.filter(f => f.doraReadiness).length)
-      : 0,
+    favorable: enriched.filter(f => f.risk.interpretation === "FAVORABLE").length,
+    aRisque: enriched.filter(f => f.risk.interpretation === "A RISQUE").length,
+    critique: enriched.filter(f => f.risk.interpretation === "CRITIQUE").length,
+    nonEvalue: enriched.filter(f => f.risk.interpretation === "Non evalue").length,
   };
 
   return (
@@ -75,11 +110,11 @@ const Evaluations = () => {
         <div className="header-left">
           <button onClick={() => navigate('/gestion')} className="btn-back-eval">&larr; Retour</button>
           <div>
-            <h1>EVALUATIONS FOURNISSEURS</h1>
-            <p>Suivi des evaluations DORA + ISO 27001 de chaque prestataire</p>
+            <h1>EVALUATIONS EBIOS RM</h1>
+            <p>Evaluation des parties prenantes</p>
           </div>
         </div>
-        <ExportButton data={filtered} columns={EXPORT_COLUMNS} filename="evaluations" title="Evaluations Fournisseurs" />
+        <ExportButton data={filtered} columns={EXPORT_COLUMNS} filename="evaluations-ebios" title="Evaluations EBIOS RM" />
       </header>
 
       {/* KPIs */}
@@ -89,31 +124,31 @@ const Evaluations = () => {
           <div className="kpi-label">Total fournisseurs</div>
         </div>
         <div className="kpi-card kpi-green">
-          <div className="kpi-value">{stats.evaluated}</div>
-          <div className="kpi-label">Evalues</div>
-        </div>
-        <div className="kpi-card kpi-red">
-          <div className="kpi-value">{stats.missing}</div>
-          <div className="kpi-label">Jamais evalues</div>
+          <div className="kpi-value">{stats.favorable}</div>
+          <div className="kpi-label">FAVORABLE</div>
         </div>
         <div className="kpi-card kpi-amber">
-          <div className="kpi-value">{stats.expired}</div>
-          <div className="kpi-label">Evaluation expiree (&gt;12 mois)</div>
+          <div className="kpi-value">{stats.aRisque}</div>
+          <div className="kpi-label">A RISQUE</div>
         </div>
-        <div className="kpi-card kpi-cyan">
-          <div className="kpi-value">{stats.avgDora}%</div>
-          <div className="kpi-label">DORA Readiness moyen</div>
+        <div className="kpi-card kpi-red">
+          <div className="kpi-value">{stats.critique}</div>
+          <div className="kpi-label">CRITIQUE</div>
+        </div>
+        <div className="kpi-card kpi-gray">
+          <div className="kpi-value">{stats.nonEvalue}</div>
+          <div className="kpi-label">Non evalue</div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="eval-toolbar">
         <select value={filter} onChange={e => setFilter(e.target.value)} className="eval-filter">
-          <option value="all">Tous</option>
-          <option value="missing">Jamais evalues</option>
-          <option value="expired">Evaluation expiree</option>
-          <option value="warning">A re-evaluer bientot</option>
-          <option value="ok">A jour</option>
+          <option value="all">Tous les niveaux</option>
+          <option value="FAVORABLE">FAVORABLE</option>
+          <option value="EQUILIBREE">EQUILIBREE</option>
+          <option value="A RISQUE">A RISQUE</option>
+          <option value="CRITIQUE">CRITIQUE</option>
         </select>
       </div>
 
@@ -127,10 +162,13 @@ const Evaluations = () => {
               <tr>
                 <th>Fournisseur</th>
                 <th>Type</th>
-                <th>Confiance</th>
-                <th>DORA Readiness</th>
-                <th>ISO Maturite</th>
-                <th>Derniere Evaluation</th>
+                <th>Dep.</th>
+                <th>Pen.</th>
+                <th>Mat.</th>
+                <th>Conf.</th>
+                <th>Note</th>
+                <th>Interpretation</th>
+                <th>Derniere Eval</th>
                 <th>Statut</th>
                 <th>Action</th>
               </tr>
@@ -146,21 +184,33 @@ const Evaluations = () => {
                     </td>
                     <td>{f.typePrestataire}</td>
                     <td>
-                      <span style={{color: getConfColor(f.niveauConfiance), fontWeight: 'bold', fontSize: '1.1rem'}}>
-                        {f.niveauConfiance || '—'}/5
+                      <span className="dim-number-badge" style={{background: `${getExposureColor(f.dep)}20`, color: getExposureColor(f.dep)}}>
+                        {f.dep || '—'}
                       </span>
                     </td>
                     <td>
-                      <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                        <div style={{flex: 1, height: '8px', background: '#334155', borderRadius: '4px', overflow: 'hidden'}}>
-                          <div style={{width: `${f.doraReadiness || 0}%`, height: '100%', background: getDoraColor(f.doraReadiness), borderRadius: '4px', transition: 'width 0.3s'}}></div>
-                        </div>
-                        <span style={{color: getDoraColor(f.doraReadiness), fontWeight: 'bold', minWidth: '40px'}}>{f.doraReadiness || '—'}%</span>
-                      </div>
+                      <span className="dim-number-badge" style={{background: `${getExposureColor(f.pen)}20`, color: getExposureColor(f.pen)}}>
+                        {f.pen || '—'}
+                      </span>
                     </td>
                     <td>
-                      <span style={{color: getConfColor(f.isoMaturity), fontWeight: 'bold'}}>
-                        {f.isoMaturity || '—'}/5
+                      <span className="dim-number-badge" style={{background: `${getReliabilityColor(f.mat)}20`, color: getReliabilityColor(f.mat)}}>
+                        {f.mat || '—'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="dim-number-badge" style={{background: `${getReliabilityColor(f.conf)}20`, color: getReliabilityColor(f.conf)}}>
+                        {f.conf || '—'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="risk-note-badge" style={{color: getRiskDisplayColor(f.risk.color), fontWeight: 'bold', fontSize: '1.1rem'}}>
+                        {f.risk.note !== null ? f.risk.note : '—'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={`risk-interpretation-pill risk-${f.risk.color}`}>
+                        {f.risk.interpretation}
                       </span>
                     </td>
                     <td style={{color: '#94a3b8', fontSize: '0.85rem'}}>
@@ -183,7 +233,7 @@ const Evaluations = () => {
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan="8" style={{textAlign: 'center', padding: '30px', color: '#64748b'}}>Aucun fournisseur ne correspond au filtre.</td></tr>
+                <tr><td colSpan="11" style={{textAlign: 'center', padding: '30px', color: '#64748b'}}>Aucun fournisseur ne correspond au filtre.</td></tr>
               )}
             </tbody>
           </table>

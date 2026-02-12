@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "./AjouterFournisseur.css";
 import { db } from "../lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 
 const TOTAL_STEPS = 6;
@@ -118,12 +118,25 @@ const AjouterFournisseur = () => {
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
   const [isSuccess, setIsSuccess] = useState(false);
 
+  const [dynamicOptions, setDynamicOptions] = useState(null);
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const snap = await getDoc(doc(db, "settings", "formOptions"));
+        if (snap.exists()) setDynamicOptions(snap.data());
+      } catch (e) { /* use defaults */ }
+    };
+    fetchOptions();
+  }, []);
+
   const [formData, setFormData] = useState({
     // Step 1 - Demandeur
     emailDemandeur: "",
     equipUtilisatrice: "",
     detailDemande: "",
     integrationOuRetrait: "",
+    dependance: "",
     // Step 2 - Identite Fournisseur
     nomFournisseur: "",
     emailFournisseur: "",
@@ -142,12 +155,15 @@ const AjouterFournisseur = () => {
     emailFormulaireSecurite: "",
     // Step 5 - Remarques
     remarques: "",
-    pretAEnvoyer: "",
   });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleScoreSelect = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const triggerNotify = (msg, type = "success") => {
@@ -156,7 +172,7 @@ const AjouterFournisseur = () => {
   };
 
   const requiredFieldsByStep = {
-    1: ["emailDemandeur", "equipUtilisatrice", "integrationOuRetrait"],
+    1: ["emailDemandeur", "equipUtilisatrice", "integrationOuRetrait", "dependance"],
     2: ["nomFournisseur", "typePrestataire"],
     3: ["typeServiceMateriel", "applicationActive"],
     4: [],
@@ -178,6 +194,7 @@ const AjouterFournisseur = () => {
     try {
       await addDoc(collection(db, "demandes"), {
         ...formData,
+        dependance: Number(formData.dependance),
         status: "en_attente_rssi",
         demandeurEmail: formData.emailDemandeur,
         createdAt: serverTimestamp(),
@@ -239,6 +256,11 @@ const AjouterFournisseur = () => {
       {/* RIGHT PANEL */}
       <div className={`right-panel ${step === 6 ? "align-top" : ""}`}>
         <div className="form-container">
+          <div className="form-cancel-bar">
+            <button type="button" className="btn-cancel-link" onClick={() => navigate("/gestion")}>
+              &larr; Annuler
+            </button>
+          </div>
           <form onSubmit={handleSubmit}>
             <div key={step} className="form-slide slide-in-up">
 
@@ -259,9 +281,24 @@ const AjouterFournisseur = () => {
               {step === 1 && (
                 <>
                   <Input label="Email du Demandeur" name="emailDemandeur" type="email" val={formData.emailDemandeur} change={handleChange} placeholder="prenom.nom@entreprise.com" autoFocus />
-                  <Select label="Equipe Utilisatrice" name="equipUtilisatrice" val={formData.equipUtilisatrice} change={handleChange} opts={EQUIPE_OPTIONS} />
-                  <Select label="Integration ou Retrait" name="integrationOuRetrait" val={formData.integrationOuRetrait} change={handleChange} opts={["Integration", "Retrait"]} />
+                  <Select label="Equipe Utilisatrice" name="equipUtilisatrice" val={formData.equipUtilisatrice} change={handleChange} opts={dynamicOptions?.equipeOptions || EQUIPE_OPTIONS} />
+                  <Select label="Integration ou Retrait" name="integrationOuRetrait" val={formData.integrationOuRetrait} change={handleChange} opts={dynamicOptions?.integrationOptions || ["Integration", "Retrait"]} />
                   <TextArea label="Detail de la Demande (optionnel)" name="detailDemande" val={formData.detailDemande} change={handleChange} placeholder="Expliquez le besoin metier justifiant cette demande..." />
+
+                  <div className="score-dimension">
+                    <h3 className="dimension-label">Niveau de Dependance <span className="dimension-range">(1-4)</span></h3>
+                    <div className="dimension-cards">
+                      {DEPENDANCE_LEVELS.map((level) => (
+                        <div key={level.value}
+                          className={`dimension-card dep-${level.value} ${Number(formData.dependance) === level.value ? "active" : ""}`}
+                          onClick={() => handleScoreSelect("dependance", level.value)}>
+                          <div className="dc-value">{level.value}</div>
+                          <div className="dc-label">{level.label}</div>
+                          <div className="dc-desc">{level.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -270,7 +307,7 @@ const AjouterFournisseur = () => {
                 <>
                   <Input label="Nom du Fournisseur" name="nomFournisseur" val={formData.nomFournisseur} change={handleChange} placeholder="Ex: Microsoft Corp" autoFocus />
                   <Input label="Email du Fournisseur" name="emailFournisseur" type="email" val={formData.emailFournisseur} change={handleChange} placeholder="contact@fournisseur.com" />
-                  <Select label="Type de Prestataire" name="typePrestataire" val={formData.typePrestataire} change={handleChange} opts={TYPE_PRESTATAIRE_OPTIONS} />
+                  <Select label="Type de Prestataire" name="typePrestataire" val={formData.typePrestataire} change={handleChange} opts={dynamicOptions?.typePrestataire || TYPE_PRESTATAIRE_OPTIONS} />
                   <Input label="Produit / Service Impacte" name="produitImpacte" val={formData.produitImpacte} change={handleChange} placeholder="Produit ou service interne concerne..." />
                 </>
               )}
@@ -280,8 +317,8 @@ const AjouterFournisseur = () => {
                 <>
                   <Input label="Type de Service / Materiel" name="typeServiceMateriel" val={formData.typeServiceMateriel} change={handleChange} placeholder="Ex: CRM, Serveur, Firewall..." autoFocus />
                   <Input label="Nom de l'Application" name="nomApplication" val={formData.nomApplication} change={handleChange} placeholder="Nom de l'application fournie..." />
-                  <Select label="Application Active" name="applicationActive" val={formData.applicationActive} change={handleChange} opts={APPLICATION_ACTIVE_OPTIONS} />
-                  <Select label="Donnees Personnelles" name="donneesPersonnelles" val={formData.donneesPersonnelles} change={handleChange} opts={DONNEES_PERSO_OPTIONS} />
+                  <Select label="Application Active" name="applicationActive" val={formData.applicationActive} change={handleChange} opts={dynamicOptions?.applicationActive || APPLICATION_ACTIVE_OPTIONS} />
+                  <Select label="Donnees Personnelles" name="donneesPersonnelles" val={formData.donneesPersonnelles} change={handleChange} opts={dynamicOptions?.donneesPerso || DONNEES_PERSO_OPTIONS} />
                 </>
               )}
 
@@ -300,7 +337,6 @@ const AjouterFournisseur = () => {
               {step === 5 && (
                 <>
                   <TextArea label="Remarques" name="remarques" val={formData.remarques} change={handleChange} placeholder="Commentaires additionnels, contexte, precisions..." />
-                  <Select label="Pret a envoyer ?" name="pretAEnvoyer" val={formData.pretAEnvoyer} change={handleChange} opts={["Oui", "Non"]} />
                 </>
               )}
 
@@ -315,6 +351,7 @@ const AjouterFournisseur = () => {
                       { key: "equipUtilisatrice", label: "Equipe" },
                       { key: "integrationOuRetrait", label: "Type" },
                       { key: "detailDemande", label: "Detail" },
+                      { key: "dependance", label: "Dependance" },
                     ]} data={formData} />
                     <RecapSection title="Fournisseur" fields={[
                       { key: "nomFournisseur", label: "Nom" },
@@ -337,7 +374,6 @@ const AjouterFournisseur = () => {
                     ]} data={formData} />
                     <RecapSection title="Remarques" fields={[
                       { key: "remarques", label: "Remarques" },
-                      { key: "pretAEnvoyer", label: "Pret a Envoyer" },
                     ]} data={formData} />
                   </div>
                 </div>
