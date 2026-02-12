@@ -1,22 +1,30 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
 import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
-import { auth } from "./db/firebase.jsx";
+import { auth } from "./lib/firebase.jsx";
 
-// --- IMPORT DU CONTEXTE (Chemin Racine) ---
-import { NotificationProvider } from "./NotificationContext";
+import { NotificationProvider } from "./hooks/NotificationContext";
 
-// --- IMPORTS DES PAGES ---
-import Gestion from "./Gestion.jsx";
-import AjouterFournisseur from "./AjouterFournisseur.jsx";
-import DetailsFournisseur from "./DetailsFournisseur.jsx";
-import ModifierFournisseur from "./ModifierFournisseur.jsx";
-import IntelligenceFournisseur from "./IntelligenceFournisseur.jsx";
+import Gestion from "./pages/Gestion.jsx";
+import AjouterFournisseur from "./pages/AjouterFournisseur.jsx";
+import DetailsFournisseur from "./pages/DetailsFournisseur.jsx";
+import ModifierFournisseur from "./pages/ModifierFournisseur.jsx";
+import IntelligenceFournisseur from "./pages/IntelligenceFournisseur.jsx";
 
-// MODULES AVANCÉS
-import Incidents from "./Incidents.jsx"; // Salle de Crise
-import AuditsGlobal from "./AuditsGlobal.jsx"; // Planning Audits
-import ContactsGlobal from "./ContactsGlobal.jsx"; // <--- NOUVEAU (Annuaire)
+import Incidents from "./pages/Incidents.jsx";
+import AuditsGlobal from "./pages/AuditsGlobal.jsx";
+import ContactsGlobal from "./pages/ContactsGlobal.jsx";
+import VendorCompare from "./pages/VendorCompare.jsx";
+import DoraRegister from "./pages/DoraRegister.jsx";
+import ConcentrationRisk from "./pages/ConcentrationRisk.jsx";
+import ExitStrategies from "./pages/ExitStrategies.jsx";
+import ContractualCompliance from "./pages/ContractualCompliance.jsx";
+import RiskMatrix from "./pages/RiskMatrix.jsx";
+import IsoControls from "./pages/IsoControls.jsx";
+import AuditProgram from "./pages/AuditProgram.jsx";
+import SlaMonitoring from "./pages/SlaMonitoring.jsx";
+import SoaDashboard from "./pages/SoaDashboard.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 import "./App.css";
 
@@ -100,15 +108,29 @@ function App() {
           } />
 
           {/* ROUTES PROTÉGÉES */}
-          <Route path="/gestion" element={connectedUser ? <Gestion setConnectedUser={setConnectedUser} /> : <Navigate to="/" replace />} />
-          <Route path="/fournisseur/:id" element={connectedUser ? <DetailsFournisseur /> : <Navigate to="/" replace />} />
-          <Route path="/modifier/:id" element={connectedUser ? <ModifierFournisseur /> : <Navigate to="/" replace />} />
-          <Route path="/intelligence/:id" element={connectedUser ? <IntelligenceFournisseur /> : <Navigate to="/" replace />} />
-          
+          <Route path="/gestion" element={<ProtectedRoute user={connectedUser}><Gestion setConnectedUser={setConnectedUser} /></ProtectedRoute>} />
+          <Route path="/fournisseur/:id" element={<ProtectedRoute user={connectedUser}><DetailsFournisseur /></ProtectedRoute>} />
+          <Route path="/modifier/:id" element={<ProtectedRoute user={connectedUser}><ModifierFournisseur /></ProtectedRoute>} />
+          <Route path="/intelligence/:id" element={<ProtectedRoute user={connectedUser}><IntelligenceFournisseur /></ProtectedRoute>} />
+
           {/* MODULES AVANCÉS */}
-          <Route path="/crise" element={connectedUser ? <Incidents /> : <Navigate to="/" replace />} />
-          <Route path="/audits" element={connectedUser ? <AuditsGlobal /> : <Navigate to="/" replace />} />
-          <Route path="/annuaire" element={connectedUser ? <ContactsGlobal /> : <Navigate to="/" replace />} /> {/* <--- ROUTE AJOUTÉE */}
+          <Route path="/crise" element={<ProtectedRoute user={connectedUser}><Incidents /></ProtectedRoute>} />
+          <Route path="/audits" element={<ProtectedRoute user={connectedUser}><AuditsGlobal /></ProtectedRoute>} />
+          <Route path="/annuaire" element={<ProtectedRoute user={connectedUser}><ContactsGlobal /></ProtectedRoute>} />
+          <Route path="/compare" element={<ProtectedRoute user={connectedUser}><VendorCompare /></ProtectedRoute>} />
+
+          {/* DORA COMPLIANCE */}
+          <Route path="/dora-register" element={<ProtectedRoute user={connectedUser}><DoraRegister /></ProtectedRoute>} />
+          <Route path="/concentration-risk" element={<ProtectedRoute user={connectedUser}><ConcentrationRisk /></ProtectedRoute>} />
+          <Route path="/exit-strategies" element={<ProtectedRoute user={connectedUser}><ExitStrategies /></ProtectedRoute>} />
+          <Route path="/contractual-compliance" element={<ProtectedRoute user={connectedUser}><ContractualCompliance /></ProtectedRoute>} />
+
+          {/* ISO 27001 COMPLIANCE */}
+          <Route path="/risk-matrix" element={<ProtectedRoute user={connectedUser}><RiskMatrix /></ProtectedRoute>} />
+          <Route path="/iso-controls" element={<ProtectedRoute user={connectedUser}><IsoControls /></ProtectedRoute>} />
+          <Route path="/audit-program" element={<ProtectedRoute user={connectedUser}><AuditProgram /></ProtectedRoute>} />
+          <Route path="/sla-monitoring" element={<ProtectedRoute user={connectedUser}><SlaMonitoring /></ProtectedRoute>} />
+          <Route path="/soa" element={<ProtectedRoute user={connectedUser}><SoaDashboard /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

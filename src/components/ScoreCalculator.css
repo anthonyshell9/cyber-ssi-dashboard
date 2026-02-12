@@ -1,0 +1,78 @@
+.calc-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.8); z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(5px);
+}
+
+.calc-modal {
+  background: #1e293b; border: 1px solid #06b6d4; padding: 30px;
+  border-radius: 12px; width: 90%; max-width: 550px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 0 50px rgba(6, 182, 212, 0.3); animation: popIn 0.3s;
+}
+
+.calc-modal h3 { margin-top: 0; color: #06b6d4; }
+.calc-modal p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px; }
+
+.calc-section-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #64748b;
+  font-weight: 700;
+  margin-top: 5px;
+}
+
+.calc-questions { display: flex; flex-direction: column; gap: 12px; }
+
+.switch-row {
+  display: flex; justify-content: space-between; align-items: center;
+  background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px;
+  cursor: pointer; transition: 0.2s;
+}
+.switch-row:hover { background: rgba(255,255,255,0.1); }
+.switch-row span { color: #e2e8f0; font-size: 0.9rem; }
+.switch-row.danger { border: 1px solid #ef4444; }
+
+.divider { height: 1px; background: #334155; margin: 5px 0; }
+
+.calc-actions {
+  margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;
+}
+.btn-cancel {
+  background: transparent; border: 1px solid #475569; color: #94a3b8;
+  padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 600;
+}
+.btn-cancel:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+.btn-apply {
+  background: #06b6d4; color: #0f172a; border: none; padding: 10px 20px;
+  border-radius: 6px; font-weight: bold; cursor: pointer;
+}
+.btn-apply:hover { background: #22d3ee; }
+
+/* Results */
+.calc-results {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;
+  margin-top: 10px;
+}
+
+.score-card {
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 20px; text-align: center;
+}
+
+.score-label {
+  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;
+  color: #94a3b8; margin-bottom: 10px; font-weight: 600;
+}
+
+.score-value {
+  font-size: 1.8rem; font-weight: 800;
+}
+
+.sc-green { color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
+.sc-yellow { color: #f59e0b; text-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
+.sc-red { color: #ef4444; text-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+
+@keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
