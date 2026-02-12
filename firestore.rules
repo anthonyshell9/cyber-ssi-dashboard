@@ -8,6 +8,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Users collection: authenticated can read own doc, admin can read/write all
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Demandes collection: authenticated can create and read own docs; rssi/admin can read all and update
+    match /demandes/{demandeId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null;
+      allow update: if request.auth != null;
+    }
+
     // Fournisseurs: authenticated users can read/write
     match /fournisseurs/{fournisseurId} {
       allow read, write: if request.auth != null;

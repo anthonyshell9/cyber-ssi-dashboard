@@ -4,12 +4,16 @@ import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from "./lib/firebase.jsx";
 
 import { NotificationProvider } from "./hooks/NotificationContext";
+import { UserProvider } from "./hooks/UserContext";
 
+import DashboardLayout from "./components/DashboardLayout.jsx";
 import Gestion from "./pages/Gestion.jsx";
 import AjouterFournisseur from "./pages/AjouterFournisseur.jsx";
 import DetailsFournisseur from "./pages/DetailsFournisseur.jsx";
 import ModifierFournisseur from "./pages/ModifierFournisseur.jsx";
 import IntelligenceFournisseur from "./pages/IntelligenceFournisseur.jsx";
+import DemandesDashboard from "./pages/DemandesDashboard.jsx";
+import MesDemandes from "./pages/MesDemandes.jsx";
 
 import Incidents from "./pages/Incidents.jsx";
 import AuditsGlobal from "./pages/AuditsGlobal.jsx";
@@ -63,6 +67,7 @@ function App() {
   if (checking) return <div className="app-loader"><div className="spinner"></div></div>;
 
   return (
+    <UserProvider>
     <NotificationProvider>
       <Router>
         <Routes>
@@ -108,36 +113,41 @@ function App() {
             )
           } />
 
-          {/* ROUTES PROTÉGÉES */}
-          <Route path="/gestion" element={<ProtectedRoute user={connectedUser}><Gestion setConnectedUser={setConnectedUser} /></ProtectedRoute>} />
-          <Route path="/fournisseur/:id" element={<ProtectedRoute user={connectedUser}><DetailsFournisseur /></ProtectedRoute>} />
-          <Route path="/modifier/:id" element={<ProtectedRoute user={connectedUser}><ModifierFournisseur /></ProtectedRoute>} />
-          <Route path="/intelligence/:id" element={<ProtectedRoute user={connectedUser}><IntelligenceFournisseur /></ProtectedRoute>} />
+          {/* ROUTES PROTÉGÉES - wrapped in DashboardLayout */}
+          <Route path="/gestion" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><Gestion /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/fournisseur/:id" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><DetailsFournisseur /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/modifier/:id" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><ModifierFournisseur /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/intelligence/:id" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><IntelligenceFournisseur /></DashboardLayout></ProtectedRoute>} />
 
           {/* MODULES AVANCÉS */}
-          <Route path="/crise" element={<ProtectedRoute user={connectedUser}><Incidents /></ProtectedRoute>} />
-          <Route path="/audits" element={<ProtectedRoute user={connectedUser}><AuditsGlobal /></ProtectedRoute>} />
-          <Route path="/annuaire" element={<ProtectedRoute user={connectedUser}><ContactsGlobal /></ProtectedRoute>} />
-          <Route path="/compare" element={<ProtectedRoute user={connectedUser}><VendorCompare /></ProtectedRoute>} />
-          <Route path="/evaluations" element={<ProtectedRoute user={connectedUser}><Evaluations /></ProtectedRoute>} />
+          <Route path="/crise" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><Incidents /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/audits" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><AuditsGlobal /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/annuaire" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><ContactsGlobal /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/compare" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><VendorCompare /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/evaluations" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><Evaluations /></DashboardLayout></ProtectedRoute>} />
 
           {/* DORA COMPLIANCE */}
-          <Route path="/dora-register" element={<ProtectedRoute user={connectedUser}><DoraRegister /></ProtectedRoute>} />
-          <Route path="/concentration-risk" element={<ProtectedRoute user={connectedUser}><ConcentrationRisk /></ProtectedRoute>} />
-          <Route path="/exit-strategies" element={<ProtectedRoute user={connectedUser}><ExitStrategies /></ProtectedRoute>} />
-          <Route path="/contractual-compliance" element={<ProtectedRoute user={connectedUser}><ContractualCompliance /></ProtectedRoute>} />
+          <Route path="/dora-register" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><DoraRegister /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/concentration-risk" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><ConcentrationRisk /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/exit-strategies" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><ExitStrategies /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/contractual-compliance" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><ContractualCompliance /></DashboardLayout></ProtectedRoute>} />
 
           {/* ISO 27001 COMPLIANCE */}
-          <Route path="/risk-matrix" element={<ProtectedRoute user={connectedUser}><RiskMatrix /></ProtectedRoute>} />
-          <Route path="/iso-controls" element={<ProtectedRoute user={connectedUser}><IsoControls /></ProtectedRoute>} />
-          <Route path="/audit-program" element={<ProtectedRoute user={connectedUser}><AuditProgram /></ProtectedRoute>} />
-          <Route path="/sla-monitoring" element={<ProtectedRoute user={connectedUser}><SlaMonitoring /></ProtectedRoute>} />
-          <Route path="/soa" element={<ProtectedRoute user={connectedUser}><SoaDashboard /></ProtectedRoute>} />
+          <Route path="/risk-matrix" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><RiskMatrix /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/iso-controls" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><IsoControls /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/audit-program" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><AuditProgram /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/sla-monitoring" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><SlaMonitoring /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/soa" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><SoaDashboard /></DashboardLayout></ProtectedRoute>} />
+
+          {/* DEMANDES / WORKFLOW */}
+          <Route path="/demandes" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><DemandesDashboard /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/mes-demandes" element={<ProtectedRoute user={connectedUser}><DashboardLayout setConnectedUser={setConnectedUser}><MesDemandes /></DashboardLayout></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </NotificationProvider>
+    </UserProvider>
   );
 }
 

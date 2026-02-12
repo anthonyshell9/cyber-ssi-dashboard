@@ -1,61 +1,179 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import "./AjouterFournisseur.css";
 import { db } from "../lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import ScoreCalculator from "../components/ScoreCalculator";
+const TOTAL_STEPS = 7;
 
-const TOTAL_STEPS = 11;
+const EQUIPE_OPTIONS = [
+  "Developpement/IT",
+  "Finance/Comptabilite",
+  "Marketing/Communication",
+  "Compliance/Juridique",
+  "RH",
+  "Direction Generale",
+  "Operations",
+  "Autre",
+];
+
+const TYPE_PRESTATAIRE_OPTIONS = [
+  "Fournisseur de services TIC",
+  "Fournisseur de services Cloud (IaaS)",
+  "Fournisseur de services Cloud (PaaS)",
+  "Fournisseur de services Cloud (SaaS)",
+  "Editeur de logiciel",
+  "Fournisseur de services de donnees et d'analyse",
+  "Prestataire de services de securite",
+  "Fournisseur de materiel informatique",
+  "Integrateur de systemes",
+  "Services de conseil en TIC",
+  "Fournisseur de services de reseau et telecom",
+  "Fournisseur de services d'hebergement",
+  "Prestataire de developpement logiciel",
+  "Services de maintenance et support",
+  "Fournisseur d'infrastructure physique",
+  "Services de formation IT",
+  "Registraire de noms de domaine",
+  "Fournisseur de services de paiement",
+  "Sous-traitant TIC",
+  "Autre",
+];
+
+const DONNEES_PERSO_OPTIONS = [
+  "Donnees des employes",
+  "Donnees des clients",
+  "Les deux",
+  "Non",
+];
+
+const APPLICATION_ACTIVE_OPTIONS = [
+  "Oui",
+  "Non",
+  "FOURNISSEUR DE SUBSTITUTION",
+];
+
+const STRATEGIE_EXIT_OPTIONS = [
+  "Non defini",
+  "Strategie detaillee",
+  "Changement de fournisseur prevu",
+];
+
+const DEPENDANCE_LEVELS = [
+  { value: 1, label: "Faible", desc: "Service non critique, alternatives disponibles" },
+  { value: 2, label: "Moderee", desc: "Service utile, remplacement possible sous 3 mois" },
+  { value: 3, label: "Elevee", desc: "Service important, remplacement difficile" },
+  { value: 4, label: "Critique", desc: "Service vital, pas d'alternative immediate" },
+];
+
+const PENETRATION_LEVELS = [
+  { value: 1, label: "Faible", desc: "Aucun acces aux systemes internes" },
+  { value: 2, label: "Moderee", desc: "Acces limite a des donnees non sensibles" },
+  { value: 3, label: "Elevee", desc: "Acces a des donnees sensibles" },
+  { value: 4, label: "Critique", desc: "Acces privilegie aux systemes critiques" },
+];
+
+const MATURITE_LEVELS = [
+  { value: 0, label: "Tres faible", desc: "Aucune mesure de securite identifiee" },
+  { value: 1, label: "Faible", desc: "Mesures basiques, pas de certification" },
+  { value: 2, label: "En developpement", desc: "Processus en cours de formalisation" },
+  { value: 3, label: "Defini", desc: "Politiques documentees, certifications en cours" },
+  { value: 4, label: "Maitrise", desc: "ISO 27001 ou equivalent, audits reguliers" },
+  { value: 5, label: "Excellent", desc: "Certifications multiples, maturite exemplaire" },
+];
+
+const CONFIANCE_LEVELS = [
+  { value: 1, label: "Tres faible", desc: "Fournisseur inconnu, pas de references" },
+  { value: 2, label: "Faible", desc: "Peu de visibilite sur les pratiques" },
+  { value: 3, label: "Moderee", desc: "References correctes, engagement contractuel" },
+  { value: 4, label: "Elevee", desc: "Partenaire reconnu, historique positif" },
+  { value: 5, label: "Tres elevee", desc: "Partenaire strategique, certifie, audite" },
+];
+
+const stepImages = {
+  1: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1920&auto=format&fit=crop",
+  2: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=1920&auto=format&fit=crop",
+  3: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1920&auto=format&fit=crop",
+  4: "https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=1920&auto=format&fit=crop",
+  5: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1920&auto=format&fit=crop",
+  6: "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1920&auto=format&fit=crop",
+  7: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=1920&auto=format&fit=crop",
+};
+
+const stepDetails = {
+  1: { title: "Demandeur", subtitle: "Qui effectue la demande ?", icon: "👤" },
+  2: { title: "Fournisseur", subtitle: "Identite du prestataire.", icon: "🏢" },
+  3: { title: "Service", subtitle: "Application & service fourni.", icon: "🛠️" },
+  4: { title: "Donnees", subtitle: "Acces & flux de donnees.", icon: "🔒" },
+  5: { title: "Scoring", subtitle: "Evaluation du risque FM-DS-100.", icon: "📊" },
+  6: { title: "Strategie", subtitle: "Remarques & plan de sortie.", icon: "📋" },
+  7: { title: "Validation", subtitle: "Recapitulatif final.", icon: "✅" },
+};
+
+const computeRiskScore = (dep, pen, mat, conf) => {
+  if (mat === 0) return { note: null, interpretation: "Non calculable - Maturite requise", color: "gray" };
+  const note = (dep * pen) / (mat * conf);
+  let interpretation, color;
+  if (note < 1) { interpretation = "FAVORABLE"; color = "green"; }
+  else if (note === 1) { interpretation = "EQUILIBREE"; color = "amber"; }
+  else if (note <= 2) { interpretation = "A RISQUE"; color = "orange"; }
+  else { interpretation = "CRITIQUE"; color = "red"; }
+  return { note: Math.round(note * 100) / 100, interpretation, color };
+};
 
 const AjouterFournisseur = () => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
   const [isSuccess, setIsSuccess] = useState(false);
-  const [showScoreCalc, setShowScoreCalc] = useState(false);
 
   const [formData, setFormData] = useState({
-    nomFournisseur: "", email: "", organisation: "", siret: "", 
-    typePrestataire: "", typeServiceMateriel: "", butRequete: "", zoneIntervention: "",
-    accesDonneesPersonnelles: "", conformiteRGPD: "", natureDonneesSortantes: "", hebergementDonnees: "",
-    actifsRelai: "", destinataireFormulaireSecurite: "", certificationISO: "", ndaSigne: "",
-    actionCISO: "", planReprise: "", niveauConfiance: "", niveauDependance: "",
+    // Step 1 - Demandeur
+    emailDemandeur: "",
+    equipUtilisatrice: "",
+    detailDemande: "",
+    integrationOuRetrait: "",
+    // Step 2 - Identite Fournisseur
+    nomFournisseur: "",
+    emailFournisseur: "",
+    typePrestataire: "",
+    produitImpacte: "",
+    // Step 3 - Service & Application
+    typeServiceMateriel: "",
+    nomApplication: "",
+    applicationActive: "",
+    donneesPersonnelles: "",
+    // Step 4 - Donnees & Acces
+    accesFournisseurSystemes: "",
+    donneesEntrantes: "",
+    donneesSortantes: "",
+    actifsBPS: "",
+    emailFormulaireSecurite: "",
+    // Step 5 - Scoring
+    dependance: "",
+    penetration: "",
+    maturite: "",
+    confiance: "",
+    // Step 6 - Remarques
+    remarques: "",
+    strategieExit: "",
+    pretAEnvoyer: "",
   });
 
-  const stepImages = {
-    1: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1920&auto=format&fit=crop", 
-    2: "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?q=80&w=1920&auto=format&fit=crop", 
-    3: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1920&auto=format&fit=crop", 
-    4: "https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=1920&auto=format&fit=crop", 
-    5: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=1920&auto=format&fit=crop", 
-    6: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=1920&auto=format&fit=crop", 
-    7: "https://images.unsplash.com/photo-1563986768609-322da13575f3?q=80&w=1920&auto=format&fit=crop", 
-    8: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?q=80&w=1920&auto=format&fit=crop", 
-    9: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?q=80&w=1920&auto=format&fit=crop", 
-    10: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=1920&auto=format&fit=crop", 
-    11: "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?q=80&w=1920&auto=format&fit=crop" 
-  };
-
-  const stepDetails = {
-    1: { title: "Identité", subtitle: "Commençons par les bases.", icon: "🏢" },
-    2: { title: "Juridique", subtitle: "Structure & Entité.", icon: "⚖️" },
-    3: { title: "Service", subtitle: "Nature de la prestation.", icon: "🛠️" },
-    4: { title: "Contexte", subtitle: "Pourquoi ce besoin ?", icon: "🎯" },
-    5: { title: "Données", subtitle: "Aspects RGPD & Privacy.", icon: "🔒" },
-    6: { title: "Hébergement", subtitle: "Localisation des data.", icon: "🌍" },
-    7: { title: "Sécurité", subtitle: "Infra & Contact CISO.", icon: "🛡️" },
-    8: { title: "Conformité", subtitle: "Certifications & NDA.", icon: "📜" },
-    9: { title: "Résilience", subtitle: "Continuité d'activité.", icon: "⚡" },
-    10: { title: "Scoring", subtitle: "Évaluation des risques.", icon: "📊" },
-    11: { title: "Validation", subtitle: "Récapitulatif final.", icon: "✅" },
-  };
+  const riskResult = useMemo(() => {
+    const d = Number(formData.dependance);
+    const p = Number(formData.penetration);
+    const m = Number(formData.maturite);
+    const c = Number(formData.confiance);
+    if (!d || !p || (!m && formData.maturite === "") || !c) return null;
+    return computeRiskScore(d, p, m, c);
+  }, [formData.dependance, formData.penetration, formData.maturite, formData.confiance]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleScoreSelect = (name, value) => {
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const triggerNotify = (msg, type = "success") => {
@@ -64,20 +182,25 @@ const AjouterFournisseur = () => {
   };
 
   const requiredFieldsByStep = {
-    1: ["nomFournisseur", "email"],
-    2: ["organisation", "siret"],
-    3: ["typePrestataire", "typeServiceMateriel"],
-    4: ["butRequete", "zoneIntervention"],
-    5: ["accesDonneesPersonnelles", "conformiteRGPD"],
-    6: ["natureDonneesSortantes", "hebergementDonnees"],
-    7: ["actifsRelai", "destinataireFormulaireSecurite"],
-    8: ["certificationISO", "ndaSigne"],
-    9: ["actionCISO", "planReprise"],
-    10: ["niveauConfiance", "niveauDependance"],
-    11: [],
+    1: ["emailDemandeur", "equipUtilisatrice", "detailDemande", "integrationOuRetrait"],
+    2: ["nomFournisseur", "typePrestataire"],
+    3: ["typeServiceMateriel", "applicationActive"],
+    4: ["accesFournisseurSystemes"],
+    5: ["dependance", "penetration", "maturite", "confiance"],
+    6: [],
+    7: [],
   };
 
-  const isStepValid = () => requiredFieldsByStep[step].every(f => formData[f] && formData[f].toString().trim() !== "");
+  const isStepValid = () => {
+    const required = requiredFieldsByStep[step];
+    const allFilled = required.every((f) => formData[f] !== undefined && formData[f].toString().trim() !== "");
+    if (step === 5) {
+      // Maturite can be 0, so check it was explicitly set
+      return allFilled && formData.maturite !== "";
+    }
+    return allFilled;
+  };
+
   const next = () => { if (step < TOTAL_STEPS && isStepValid()) setStep(step + 1); };
   const prev = () => { if (step > 1) setStep(step - 1); };
 
@@ -85,16 +208,24 @@ const AjouterFournisseur = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      await addDoc(collection(db, "fournisseurs"), {
+      const risk = riskResult || computeRiskScore(
+        Number(formData.dependance),
+        Number(formData.penetration),
+        Number(formData.maturite),
+        Number(formData.confiance)
+      );
+      await addDoc(collection(db, "demandes"), {
         ...formData,
-        niveauConfiance: Number(formData.niveauConfiance),
-        niveauDependance: Number(formData.niveauDependance),
-        niveauMaturite: Number(formData.niveauMaturite || 0),
-        doraReadiness: Number(formData.doraReadiness || 0),
-        isoMaturity: Number(formData.isoMaturity || 0),
-        lastEvaluation: new Date().toISOString(),
+        dependance: Number(formData.dependance),
+        penetration: Number(formData.penetration),
+        maturite: Number(formData.maturite),
+        confiance: Number(formData.confiance),
+        riskNote: risk.note,
+        riskInterpretation: risk.interpretation,
+        riskColor: risk.color,
+        status: "en_attente_rssi",
+        demandeurEmail: formData.emailDemandeur,
         createdAt: serverTimestamp(),
-        status: "en_attente",
       });
       setIsSuccess(true);
     } catch (error) {
@@ -110,14 +241,57 @@ const AjouterFournisseur = () => {
     setFormData(Object.keys(formData).reduce((acc, key) => ({ ...acc, [key]: "" }), {}));
   };
 
+  const getScoreColorClass = (color) => {
+    if (color === "green") return "risk-favorable";
+    if (color === "amber") return "risk-equilibree";
+    if (color === "orange") return "risk-arisque";
+    if (color === "red") return "risk-critique";
+    return "risk-unknown";
+  };
+
+  const getScoreEmoji = (color) => {
+    if (color === "green") return "🟢";
+    if (color === "amber") return "🟡";
+    if (color === "orange") return "🟠";
+    if (color === "red") return "🔴";
+    return "⚪";
+  };
+
+  const fieldLabels = {
+    emailDemandeur: "Email Demandeur",
+    equipUtilisatrice: "Equipe Utilisatrice",
+    detailDemande: "Detail de la Demande",
+    integrationOuRetrait: "Integration ou Retrait",
+    nomFournisseur: "Nom du Fournisseur",
+    emailFournisseur: "Email Fournisseur",
+    typePrestataire: "Type de Prestataire",
+    produitImpacte: "Produit BPS Impacte",
+    typeServiceMateriel: "Type de Service/Materiel",
+    nomApplication: "Nom de l'Application",
+    applicationActive: "Application Active",
+    donneesPersonnelles: "Donnees Personnelles",
+    accesFournisseurSystemes: "Acces Fournisseur aux Systemes",
+    donneesEntrantes: "Donnees Entrantes",
+    donneesSortantes: "Donnees Sortantes",
+    actifsBPS: "Actifs BPS Communicants",
+    emailFormulaireSecurite: "Email Formulaire Securite",
+    dependance: "Dependance",
+    penetration: "Penetration",
+    maturite: "Maturite",
+    confiance: "Confiance",
+    remarques: "Remarques",
+    strategieExit: "Strategie de Sortie",
+    pretAEnvoyer: "Pret a Envoyer au RSSI",
+  };
+
   if (isSuccess) {
     return (
       <div className="split-layout success-mode">
         <div className="success-content scale-in">
           <div className="huge-icon">🎉</div>
-          <h1>Dossier Validé !</h1>
-          <p>Le fournisseur a été ajouté à la base de surveillance Cyber.</p>
-          <button className="btn-primary" onClick={resetForm}>Ajouter un autre</button>
+          <h1>Demande Soumise !</h1>
+          <p>La demande a ete transmise et est en attente de validation par le RSSI.</p>
+          <button className="btn-primary" onClick={resetForm}>Nouvelle Demande</button>
         </div>
       </div>
     );
@@ -127,145 +301,272 @@ const AjouterFournisseur = () => {
     <div className="split-layout">
       {notification.show && <div className={`toast ${notification.type}`}>{notification.message}</div>}
 
-      {/* GAUCHE (FIXE) */}
+      {/* LEFT PANEL */}
       <div className="left-panel">
         <img src={stepImages[step]} alt="" className="panel-bg-image" key={step} />
         <div className="panel-overlay"></div>
         <div className="panel-content">
-          <div className="step-display"><span className="step-number">{step}</span><span className="step-total">/ {TOTAL_STEPS}</span></div>
-          <div className="step-info-anim key-{step}">
+          <div className="step-display">
+            <span className="step-number">{step}</span>
+            <span className="step-total">/ {TOTAL_STEPS}</span>
+          </div>
+          <div className="step-info-anim" key={`info-${step}`}>
             <div className="step-icon">{stepDetails[step].icon}</div>
             <h2 className="step-title-large">{stepDetails[step].title}</h2>
             <p className="step-subtitle">{stepDetails[step].subtitle}</p>
           </div>
-          <div className="progress-bar-vertical"><div className="progress-fill-vertical" style={{ height: `${(step / TOTAL_STEPS) * 100}%` }}></div></div>
+          <div className="progress-bar-vertical">
+            <div className="progress-fill-vertical" style={{ height: `${(step / TOTAL_STEPS) * 100}%` }}></div>
+          </div>
         </div>
       </div>
 
-      {/* DROITE (SCROLLABLE) */}
-      {/* Modification ICI : Ajout de la classe 'align-top' si step === 10 */}
-      <div className={`right-panel ${step === 10 ? 'align-top' : ''}`}>
-        
+      {/* RIGHT PANEL */}
+      <div className={`right-panel ${step === 5 || step === 7 ? "align-top" : ""}`}>
         <div className="form-container">
           <form onSubmit={handleSubmit}>
-            
             <div key={step} className="form-slide slide-in-up">
-              
-              {/* HEADER CYBER SSI */}
-              {step !== 10 && (
+
+              {/* HEADER */}
+              {step !== 5 && step !== 7 && (
                 <div className="welcome-header">
                   <h2 className="cyber-brand-title">
-                    CYBER SSI
-                    <span className="title-icon">☁️</span>
+                    FM-DS-100
+                    <span className="title-icon">🛡️</span>
                   </h2>
                   {step === 1 && (
-                    <p className="welcome-msg">Bienvenue. Veuillez renseigner les informations du nouveau fournisseur.</p>
+                    <p className="welcome-msg">Formulaire d'evaluation des fournisseurs ICT - Conforme DORA.</p>
                   )}
                 </div>
               )}
 
-              {step === 1 && (<><Input label="Nom de l'entreprise" name="nomFournisseur" val={formData.nomFournisseur} change={handleChange} placeholder="Ex: Microsoft Corp" autoFocus /><Input label="Email de contact" name="email" type="email" val={formData.email} change={handleChange} placeholder="contact@entreprise.com" /></>)}
-              {step === 2 && (<><Select label="Votre Entité" name="organisation" val={formData.organisation} change={handleChange} opts={["Afrique Globale", "Europe", "Asie"]} /><Input label="Numéro SIRET / ID" name="siret" val={formData.siret} change={handleChange} placeholder="Identifiant unique..." /></>)}
-              {step === 3 && (<><Select label="Type de Prestataire" name="typePrestataire" val={formData.typePrestataire} change={handleChange} opts={["SaaS / Logiciel", "Cloud Provider", "Développement", "Matériel / IoT"]} /><Input label="Description du Service" name="typeServiceMateriel" val={formData.typeServiceMateriel} change={handleChange} placeholder="Ex: CRM Marketing..." /></>)}
-              {step === 4 && (<><TextArea label="Objectif Business" name="butRequete" val={formData.butRequete} change={handleChange} placeholder="Pourquoi avons-nous besoin de ce fournisseur ?" /><Input label="Zone Géographique" name="zoneIntervention" val={formData.zoneIntervention} change={handleChange} placeholder="Ex: Monde, France..." /></>)}
-              {step === 5 && (<><Select label="Accès Données Personnelles ?" name="accesDonneesPersonnelles" val={formData.accesDonneesPersonnelles} change={handleChange} opts={["NON - Aucune donnée", "OUI - Consultation", "OUI - Stockage"]} /><Select label="Conformité RGPD" name="conformiteRGPD" val={formData.conformiteRGPD} change={handleChange} opts={["Conforme (DPA signé)", "En cours", "Non Conforme"]} /></>)}
-              {step === 6 && (<><Input label="Sensibilité Données Sortantes" name="natureDonneesSortantes" val={formData.natureDonneesSortantes} change={handleChange} placeholder="Ex: Bancaires, Santé, Publiques..." /><Select label="Pays d'Hébergement" name="hebergementDonnees" val={formData.hebergementDonnees} change={handleChange} opts={["France", "Union Européenne", "USA", "Autre"]} /></>)}
-              {step === 7 && (<><Input label="Actifs & Connexions" name="actifsRelai" val={formData.actifsRelai} change={handleChange} placeholder="VPN, API, Bastion..." /><Input label="Email CISO (Sécurité)" name="destinataireFormulaireSecurite" type="email" val={formData.destinataireFormulaireSecurite} change={handleChange} placeholder="security@fournisseur.com" /></>)}
-              {step === 8 && (<><Input label="Certifications (ISO, HDS)" name="certificationISO" val={formData.certificationISO} change={handleChange} placeholder="Ex: ISO 27001" /><Select label="NDA Signé ?" name="ndaSigne" val={formData.ndaSigne} change={handleChange} opts={["OUI", "NON"]} /></>)}
-              {step === 9 && (<><Input label="Action Sécurité Requise" name="actionCISO" val={formData.actionCISO} change={handleChange} placeholder="Audit, PAS, Questionnaire..." /><Input label="Continuité (RTO/RPO)" name="planReprise" val={formData.planReprise} change={handleChange} placeholder="Ex: RTO < 4h" /></>)}
+              {/* STEP 1 - Demandeur */}
+              {step === 1 && (
+                <>
+                  <Input label="Email du Demandeur" name="emailDemandeur" type="email" val={formData.emailDemandeur} change={handleChange} placeholder="prenom.nom@bps.lu" autoFocus />
+                  <Select label="Equipe Utilisatrice" name="equipUtilisatrice" val={formData.equipUtilisatrice} change={handleChange} opts={EQUIPE_OPTIONS} />
+                  <TextArea label="Detail de la Demande" name="detailDemande" val={formData.detailDemande} change={handleChange} placeholder="Expliquez le besoin metier justifiant cette demande..." />
+                  <Select label="Integration ou Retrait" name="integrationOuRetrait" val={formData.integrationOuRetrait} change={handleChange} opts={["Integration", "Retrait"]} />
+                </>
+              )}
 
-              {/* ETAPE 10 : SCORING AVEC ASSISTANT IA */}
-              {step === 10 && (
+              {/* STEP 2 - Identite Fournisseur */}
+              {step === 2 && (
+                <>
+                  <Input label="Nom du Fournisseur" name="nomFournisseur" val={formData.nomFournisseur} change={handleChange} placeholder="Ex: Microsoft Corp" autoFocus />
+                  <Input label="Email du Fournisseur" name="emailFournisseur" type="email" val={formData.emailFournisseur} change={handleChange} placeholder="contact@fournisseur.com" />
+                  <Select label="Type de Prestataire ICT" name="typePrestataire" val={formData.typePrestataire} change={handleChange} opts={TYPE_PRESTATAIRE_OPTIONS} />
+                  <Input label="Produit BPS Impacte" name="produitImpacte" val={formData.produitImpacte} change={handleChange} placeholder="Produit ou service BPS concerne..." />
+                </>
+              )}
+
+              {/* STEP 3 - Service & Application */}
+              {step === 3 && (
+                <>
+                  <Input label="Type de Service / Materiel" name="typeServiceMateriel" val={formData.typeServiceMateriel} change={handleChange} placeholder="Ex: CRM, Serveur, Firewall..." autoFocus />
+                  <Input label="Nom de l'Application" name="nomApplication" val={formData.nomApplication} change={handleChange} placeholder="Nom de l'application fournie..." />
+                  <Select label="Application Active" name="applicationActive" val={formData.applicationActive} change={handleChange} opts={APPLICATION_ACTIVE_OPTIONS} />
+                  <Select label="Donnees Personnelles" name="donneesPersonnelles" val={formData.donneesPersonnelles} change={handleChange} opts={DONNEES_PERSO_OPTIONS} />
+                </>
+              )}
+
+              {/* STEP 4 - Donnees & Acces */}
+              {step === 4 && (
+                <>
+                  <TextArea label="Acces Fournisseur aux Systemes BPS" name="accesFournisseurSystemes" val={formData.accesFournisseurSystemes} change={handleChange} placeholder="Decrivez les acces du fournisseur a vos systemes (VPN, API, Bastion...)" />
+                  <TextArea label="Donnees Entrantes" name="donneesEntrantes" val={formData.donneesEntrantes} change={handleChange} placeholder="Description des donnees recues du fournisseur..." />
+                  <TextArea label="Donnees Sortantes" name="donneesSortantes" val={formData.donneesSortantes} change={handleChange} placeholder="Description des donnees transmises au fournisseur..." />
+                  <TextArea label="Actifs BPS Communicants" name="actifsBPS" val={formData.actifsBPS} change={handleChange} placeholder="Serveurs, bases, applications communicant avec le fournisseur..." />
+                  <Input label="Email Formulaire Securite" name="emailFormulaireSecurite" type="email" val={formData.emailFormulaireSecurite} change={handleChange} placeholder="security@fournisseur.com" />
+                </>
+              )}
+
+              {/* STEP 5 - Scoring Risque */}
+              {step === 5 && (
                 <div className="scoring-wrapper">
-                  {/* Bouton pour lancer l'évaluation assistée */}
-                  <div style={{textAlign: 'center', marginBottom: '25px'}}>
-                    <button type="button" onClick={() => setShowScoreCalc(true)} style={{
-                      background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', color: 'white', border: 'none',
-                      padding: '14px 28px', borderRadius: '8px', fontSize: '1.05rem', fontWeight: 'bold',
-                      cursor: 'pointer', boxShadow: '0 0 20px rgba(6, 182, 212, 0.4)'
-                    }}>
-                      Lancer l'Evaluation Assistee (DORA + ISO)
-                    </button>
-                    <p style={{color: '#94a3b8', fontSize: '0.85rem', marginTop: '10px'}}>Calcule automatiquement Confiance, DORA Readiness et Maturite ISO 27001</p>
+                  <div className="scoring-header">
+                    <h2 className="scoring-title">Evaluation du Risque</h2>
+                    <p className="scoring-subtitle">NOTE = (Dependance x Penetration) / (Maturite x Confiance)</p>
                   </div>
 
-                  {/* Affichage des scores calculés (si remplis) */}
-                  {formData.niveauConfiance && (
-                    <div style={{display: 'flex', gap: '15px', justifyContent: 'center', marginBottom: '20px', flexWrap: 'wrap'}}>
-                      <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '15px 25px', textAlign: 'center'}}>
-                        <div style={{color: '#94a3b8', fontSize: '0.8rem'}}>Confiance</div>
-                        <div style={{fontSize: '1.8rem', fontWeight: 'bold', color: Number(formData.niveauConfiance) >= 4 ? '#10b981' : Number(formData.niveauConfiance) >= 3 ? '#f59e0b' : '#ef4444'}}>{formData.niveauConfiance}/5</div>
-                      </div>
-                      <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '15px 25px', textAlign: 'center'}}>
-                        <div style={{color: '#94a3b8', fontSize: '0.8rem'}}>Dependance</div>
-                        <div style={{fontSize: '1.8rem', fontWeight: 'bold', color: Number(formData.niveauDependance) <= 2 ? '#10b981' : '#f59e0b'}}>{formData.niveauDependance}/4</div>
-                      </div>
-                      {formData.doraReadiness !== undefined && (
-                        <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '15px 25px', textAlign: 'center'}}>
-                          <div style={{color: '#94a3b8', fontSize: '0.8rem'}}>DORA Readiness</div>
-                          <div style={{fontSize: '1.8rem', fontWeight: 'bold', color: formData.doraReadiness >= 70 ? '#10b981' : formData.doraReadiness >= 40 ? '#f59e0b' : '#ef4444'}}>{formData.doraReadiness}%</div>
+                  {/* Dependance */}
+                  <div className="score-dimension">
+                    <h3 className="dimension-label">Dependance <span className="dimension-range">(1-4)</span></h3>
+                    <div className="dimension-cards">
+                      {DEPENDANCE_LEVELS.map((level) => (
+                        <div
+                          key={level.value}
+                          className={`dimension-card dep-${level.value} ${Number(formData.dependance) === level.value ? "active" : ""}`}
+                          onClick={() => handleScoreSelect("dependance", level.value)}
+                        >
+                          <div className="dc-value">{level.value}</div>
+                          <div className="dc-label">{level.label}</div>
+                          <div className="dc-desc">{level.desc}</div>
                         </div>
-                      )}
-                      {formData.isoMaturity !== undefined && (
-                        <div style={{background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '15px 25px', textAlign: 'center'}}>
-                          <div style={{color: '#94a3b8', fontSize: '0.8rem'}}>ISO 27001</div>
-                          <div style={{fontSize: '1.8rem', fontWeight: 'bold', color: formData.isoMaturity >= 4 ? '#10b981' : formData.isoMaturity >= 3 ? '#f59e0b' : '#ef4444'}}>{formData.isoMaturity}/5</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Fallback manuel */}
-                  <div style={{borderTop: '1px solid #334155', paddingTop: '20px', marginTop: '10px'}}>
-                    <p style={{color: '#64748b', fontSize: '0.85rem', textAlign: 'center', marginBottom: '15px'}}>Ou saisie manuelle :</p>
-                    <div className="score-section">
-                      <h3>Niveau de Confiance</h3>
-                      <div className="cards-row">{[1, 2, 3, 4, 5].map(n => (<div key={n} className={`score-card c-${n} ${formData.niveauConfiance == n ? 'active' : ''}`} onClick={() => handleScoreSelect('niveauConfiance', n)}>{n}</div>))}</div>
-                    </div>
-                    <div className="score-section">
-                      <h3>Niveau de Dependance</h3>
-                      <div className="cards-row">{[1, 2, 3, 4].map(n => (<div key={n} className={`score-card d-${n} ${formData.niveauDependance == n ? 'active' : ''}`} onClick={() => handleScoreSelect('niveauDependance', n)}>{n}</div>))}</div>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Modal ScoreCalculator */}
-                  {showScoreCalc && (
-                    <ScoreCalculator
-                      onClose={() => setShowScoreCalc(false)}
-                      onApply={(scores) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          niveauConfiance: scores.niveauConfiance,
-                          niveauDependance: scores.niveauDependance,
-                          niveauMaturite: scores.niveauMaturite,
-                          niveauPenetration: scores.niveauPenetration,
-                          doraReadiness: scores.doraReadiness,
-                          isoMaturity: scores.isoMaturity,
-                        }));
-                        setShowScoreCalc(false);
-                      }}
-                    />
-                  )}
+                  {/* Penetration */}
+                  <div className="score-dimension">
+                    <h3 className="dimension-label">Penetration <span className="dimension-range">(1-4)</span></h3>
+                    <div className="dimension-cards">
+                      {PENETRATION_LEVELS.map((level) => (
+                        <div
+                          key={level.value}
+                          className={`dimension-card pen-${level.value} ${Number(formData.penetration) === level.value ? "active" : ""}`}
+                          onClick={() => handleScoreSelect("penetration", level.value)}
+                        >
+                          <div className="dc-value">{level.value}</div>
+                          <div className="dc-label">{level.label}</div>
+                          <div className="dc-desc">{level.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Maturite */}
+                  <div className="score-dimension">
+                    <h3 className="dimension-label">Maturite <span className="dimension-range">(0-5)</span></h3>
+                    <div className="dimension-cards dimension-cards-6">
+                      {MATURITE_LEVELS.map((level) => (
+                        <div
+                          key={level.value}
+                          className={`dimension-card mat-${level.value} ${formData.maturite !== "" && Number(formData.maturite) === level.value ? "active" : ""}`}
+                          onClick={() => handleScoreSelect("maturite", level.value)}
+                        >
+                          <div className="dc-value">{level.value}</div>
+                          <div className="dc-label">{level.label}</div>
+                          <div className="dc-desc">{level.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Confiance */}
+                  <div className="score-dimension">
+                    <h3 className="dimension-label">Confiance <span className="dimension-range">(1-5)</span></h3>
+                    <div className="dimension-cards dimension-cards-5">
+                      {CONFIANCE_LEVELS.map((level) => (
+                        <div
+                          key={level.value}
+                          className={`dimension-card conf-${level.value} ${Number(formData.confiance) === level.value ? "active" : ""}`}
+                          onClick={() => handleScoreSelect("confiance", level.value)}
+                        >
+                          <div className="dc-value">{level.value}</div>
+                          <div className="dc-label">{level.label}</div>
+                          <div className="dc-desc">{level.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Live Risk Score */}
+                  <div className="risk-result-box">
+                    {riskResult ? (
+                      riskResult.note !== null ? (
+                        <div className={`risk-display ${getScoreColorClass(riskResult.color)}`}>
+                          <div className="risk-emoji">{getScoreEmoji(riskResult.color)}</div>
+                          <div className="risk-note">{riskResult.note}</div>
+                          <div className="risk-interpretation">{riskResult.interpretation}</div>
+                          <div className="risk-formula">
+                            ({formData.dependance} x {formData.penetration}) / ({formData.maturite} x {formData.confiance})
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="risk-display risk-unknown">
+                          <div className="risk-emoji">⚠️</div>
+                          <div className="risk-interpretation">{riskResult.interpretation}</div>
+                        </div>
+                      )
+                    ) : (
+                      <div className="risk-display risk-pending">
+                        <div className="risk-emoji">⏳</div>
+                        <div className="risk-interpretation">Selectionnez les 4 criteres pour calculer la note</div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              {step === 11 && (
+              {/* STEP 6 - Remarques & Strategie */}
+              {step === 6 && (
+                <>
+                  <TextArea label="Remarques" name="remarques" val={formData.remarques} change={handleChange} placeholder="Commentaires additionnels, contexte, precisions..." />
+                  <Select label="Strategie de Sortie" name="strategieExit" val={formData.strategieExit} change={handleChange} opts={STRATEGIE_EXIT_OPTIONS} />
+                  <Select label="Pret a Envoyer au RSSI ?" name="pretAEnvoyer" val={formData.pretAEnvoyer} change={handleChange} opts={["Oui", "Non"]} />
+                </>
+              )}
+
+              {/* STEP 7 - Recapitulatif */}
+              {step === 7 && (
                 <div className="recap-wrapper">
-                  <h3>Récapitulatif</h3>
-                  <div className="recap-grid">{Object.entries(formData).map(([k, v]) => (<div key={k} className="recap-item"><label>{k}</label><span>{v || "—"}</span></div>))}</div>
+                  <h2 className="recap-main-title">Recapitulatif de la Demande</h2>
+
+                  {/* Risk Score Prominent */}
+                  {riskResult && riskResult.note !== null && (
+                    <div className={`recap-risk-banner ${getScoreColorClass(riskResult.color)}`}>
+                      <span className="recap-risk-emoji">{getScoreEmoji(riskResult.color)}</span>
+                      <span className="recap-risk-note">NOTE : {riskResult.note}</span>
+                      <span className="recap-risk-label">{riskResult.interpretation}</span>
+                    </div>
+                  )}
+
+                  <div className="recap-sections">
+                    <RecapSection title="Demandeur" fields={[
+                      { key: "emailDemandeur", label: "Email" },
+                      { key: "equipUtilisatrice", label: "Equipe" },
+                      { key: "detailDemande", label: "Detail" },
+                      { key: "integrationOuRetrait", label: "Type" },
+                    ]} data={formData} />
+                    <RecapSection title="Fournisseur" fields={[
+                      { key: "nomFournisseur", label: "Nom" },
+                      { key: "emailFournisseur", label: "Email" },
+                      { key: "typePrestataire", label: "Type Prestataire" },
+                      { key: "produitImpacte", label: "Produit Impacte" },
+                    ]} data={formData} />
+                    <RecapSection title="Service & Application" fields={[
+                      { key: "typeServiceMateriel", label: "Service/Materiel" },
+                      { key: "nomApplication", label: "Application" },
+                      { key: "applicationActive", label: "Active" },
+                      { key: "donneesPersonnelles", label: "Donnees Perso." },
+                    ]} data={formData} />
+                    <RecapSection title="Donnees & Acces" fields={[
+                      { key: "accesFournisseurSystemes", label: "Acces Systemes" },
+                      { key: "donneesEntrantes", label: "Donnees Entrantes" },
+                      { key: "donneesSortantes", label: "Donnees Sortantes" },
+                      { key: "actifsBPS", label: "Actifs BPS" },
+                      { key: "emailFormulaireSecurite", label: "Email Securite" },
+                    ]} data={formData} />
+                    <RecapSection title="Scoring Risque" fields={[
+                      { key: "dependance", label: "Dependance" },
+                      { key: "penetration", label: "Penetration" },
+                      { key: "maturite", label: "Maturite" },
+                      { key: "confiance", label: "Confiance" },
+                    ]} data={formData} />
+                    <RecapSection title="Strategie" fields={[
+                      { key: "remarques", label: "Remarques" },
+                      { key: "strategieExit", label: "Strategie Exit" },
+                      { key: "pretAEnvoyer", label: "Pret a Envoyer" },
+                    ]} data={formData} />
+                  </div>
                 </div>
               )}
             </div>
 
+            {/* Navigation */}
             <div className="form-actions">
-              {step > 1 ? <button type="button" className="btn-ghost" onClick={prev}>Retour</button> : <div></div>}
+              {step > 1 ? (
+                <button type="button" className="btn-ghost" onClick={prev}>Retour</button>
+              ) : <div></div>}
               {step < TOTAL_STEPS ? (
                 <button type="button" className="btn-primary" disabled={!isStepValid()} onClick={next}>Continuer →</button>
               ) : (
-                <button type="submit" className="btn-submit" disabled={loading}>{loading ? "Envoi..." : "Valider le Dossier"}</button>
+                <button type="submit" className="btn-submit" disabled={loading}>
+                  {loading ? "Envoi en cours..." : "Soumettre la Demande"}
+                </button>
               )}
             </div>
-
           </form>
         </div>
       </div>
@@ -273,14 +574,43 @@ const AjouterFournisseur = () => {
   );
 };
 
-const Input = ({ label, name, val, change, placeholder, type="text", autoFocus=false }) => (
-  <div className="field-block"><label>{label}</label><input type={type} name={name} value={val} onChange={change} placeholder={placeholder} autoFocus={autoFocus} /></div>
+/* Sub-components */
+const Input = ({ label, name, val, change, placeholder, type = "text", autoFocus = false }) => (
+  <div className="field-block">
+    <label>{label}</label>
+    <input type={type} name={name} value={val} onChange={change} placeholder={placeholder} autoFocus={autoFocus} />
+  </div>
 );
+
 const TextArea = ({ label, name, val, change, placeholder }) => (
-  <div className="field-block"><label>{label}</label><textarea name={name} value={val} onChange={change} placeholder={placeholder} /></div>
+  <div className="field-block">
+    <label>{label}</label>
+    <textarea name={name} value={val} onChange={change} placeholder={placeholder} />
+  </div>
 );
+
 const Select = ({ label, name, val, change, opts }) => (
-  <div className="field-block"><label>{label}</label><select name={name} value={val} onChange={change}><option value="">Sélectionner...</option>{opts.map(o => <option key={o} value={o}>{o}</option>)}</select></div>
+  <div className="field-block">
+    <label>{label}</label>
+    <select name={name} value={val} onChange={change}>
+      <option value="">Selectionner...</option>
+      {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+    </select>
+  </div>
+);
+
+const RecapSection = ({ title, fields, data }) => (
+  <div className="recap-section">
+    <h4 className="recap-section-title">{title}</h4>
+    <div className="recap-grid">
+      {fields.map(({ key, label }) => (
+        <div key={key} className="recap-item">
+          <label>{label}</label>
+          <span>{data[key] !== "" && data[key] !== undefined ? String(data[key]) : "—"}</span>
+        </div>
+      ))}
+    </div>
+  </div>
 );
 
 export default AjouterFournisseur;

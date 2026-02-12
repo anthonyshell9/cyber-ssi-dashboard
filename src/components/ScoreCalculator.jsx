@@ -1,168 +1,176 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import './ScoreCalculator.css';
 
+const DEPENDANCE_LEVELS = [
+  { value: 1, label: "Faible", desc: "Service non critique, alternatives disponibles" },
+  { value: 2, label: "Moderee", desc: "Service utile, remplacement possible sous 3 mois" },
+  { value: 3, label: "Elevee", desc: "Service important, remplacement difficile" },
+  { value: 4, label: "Critique", desc: "Service vital, pas d'alternative immediate" },
+];
+
+const PENETRATION_LEVELS = [
+  { value: 1, label: "Faible", desc: "Aucun acces aux systemes internes" },
+  { value: 2, label: "Moderee", desc: "Acces limite a des donnees non sensibles" },
+  { value: 3, label: "Elevee", desc: "Acces a des donnees sensibles" },
+  { value: 4, label: "Critique", desc: "Acces privilegie aux systemes critiques" },
+];
+
+const MATURITE_LEVELS = [
+  { value: 0, label: "Tres faible", desc: "Aucune mesure de securite identifiee" },
+  { value: 1, label: "Faible", desc: "Mesures basiques, pas de certification" },
+  { value: 2, label: "En dev.", desc: "Processus en cours de formalisation" },
+  { value: 3, label: "Defini", desc: "Politiques documentees, certifications en cours" },
+  { value: 4, label: "Maitrise", desc: "ISO 27001, audits reguliers" },
+  { value: 5, label: "Excellent", desc: "Certifications multiples, maturite exemplaire" },
+];
+
+const CONFIANCE_LEVELS = [
+  { value: 1, label: "Tres faible", desc: "Fournisseur inconnu, pas de references" },
+  { value: 2, label: "Faible", desc: "Peu de visibilite sur les pratiques" },
+  { value: 3, label: "Moderee", desc: "References correctes, engagement contractuel" },
+  { value: 4, label: "Elevee", desc: "Partenaire reconnu, historique positif" },
+  { value: 5, label: "Tres elevee", desc: "Partenaire strategique, certifie, audite" },
+];
+
+const computeRiskScore = (dep, pen, mat, conf) => {
+  if (mat === 0) return { note: null, interpretation: "Non calculable - Maturite requise", color: "gray" };
+  const note = (dep * pen) / (mat * conf);
+  let interpretation, color;
+  if (note < 1) { interpretation = "FAVORABLE"; color = "green"; }
+  else if (note === 1) { interpretation = "EQUILIBREE"; color = "amber"; }
+  else if (note <= 2) { interpretation = "A RISQUE"; color = "orange"; }
+  else { interpretation = "CRITIQUE"; color = "red"; }
+  return { note: Math.round(note * 100) / 100, interpretation, color };
+};
+
 const ScoreCalculator = ({ onClose, onApply }) => {
-  const [answers, setAnswers] = useState({
-    certif: false,       // ISO 27001 / HDS / SecNumCloud (+2 confiance)
-    france: false,       // Heberge en France/UE (+1)
-    rgpd: false,         // RGPD conforme (+1)
-    critique: false,     // Service critique (Dependance +2)
-    backup: false,       // Plan de continuite / Backups (+1)
-    incident: false,     // Incident recent (-2)
-    nda: false,          // NDA signe (+1)
-    audits: false,       // Audits reguliers (+1)
-    exitStrategy: false, // Strategie de sortie DORA (+1)
+  const [scores, setScores] = useState({
+    dependance: "",
+    penetration: "",
+    maturite: "",
+    confiance: "",
   });
-  const [showResults, setShowResults] = useState(false);
-  const [scores, setScores] = useState(null);
 
-  const toggle = (key) => setAnswers({ ...answers, [key]: !answers[key] });
+  const select = (key, value) => setScores(prev => ({ ...prev, [key]: value }));
 
-  const calculate = () => {
-    // --- Confiance (1-5) ---
-    let confiance = 1;
-    if (answers.certif) confiance += 2;
-    if (answers.france) confiance += 1;
-    if (answers.rgpd) confiance += 1;
-    if (answers.backup) confiance += 1;
-    if (answers.nda) confiance += 1;
-    if (answers.incident) confiance -= 2;
-    confiance = Math.max(1, Math.min(5, confiance));
+  const riskResult = useMemo(() => {
+    const d = Number(scores.dependance);
+    const p = Number(scores.penetration);
+    const m = Number(scores.maturite);
+    const c = Number(scores.confiance);
+    if (!d || !p || (!m && scores.maturite === "") || !c) return null;
+    return computeRiskScore(d, p, m, c);
+  }, [scores.dependance, scores.penetration, scores.maturite, scores.confiance]);
 
-    // --- Dependance (1-4) ---
-    let dependance = 1;
-    if (answers.critique) dependance += 2;
-    if (!answers.backup) dependance += 1;
-    dependance = Math.max(1, Math.min(4, dependance));
+  const canApply = scores.dependance !== "" && scores.penetration !== "" && scores.maturite !== "" && scores.confiance !== "";
 
-    // --- DORA Readiness (0-100) ---
-    let doraPoints = 0;
-    const doraMax = 9;
-    if (answers.certif) doraPoints += 2;
-    if (answers.backup) doraPoints += 1;
-    if (answers.exitStrategy) doraPoints += 2;
-    if (answers.audits) doraPoints += 1;
-    if (answers.nda) doraPoints += 1;
-    if (!answers.incident) doraPoints += 1;
-    if (!answers.critique || answers.backup) doraPoints += 1;
-    const doraReadiness = Math.round((doraPoints / doraMax) * 100);
-
-    // --- ISO 27001 Maturity (1-5) ---
-    let isoScore = 1;
-    if (answers.certif) isoScore += 2;
-    if (answers.rgpd) isoScore += 0.5;
-    if (answers.audits) isoScore += 0.5;
-    if (answers.backup) isoScore += 0.5;
-    if (answers.nda) isoScore += 0.5;
-    if (answers.france) isoScore += 0.5;
-    if (!answers.incident) isoScore += 0.5;
-    isoScore = Math.max(1, Math.min(5, Math.round(isoScore)));
-
-    const result = {
-      niveauConfiance: confiance,
-      niveauDependance: dependance,
-      niveauMaturite: isoScore,
-      niveauPenetration: 3,
-      doraReadiness,
-      isoMaturity: isoScore,
-    };
-
-    setScores(result);
-    setShowResults(true);
+  const getColorClass = (color) => {
+    if (color === "green") return "sc-green";
+    if (color === "amber") return "sc-yellow";
+    if (color === "orange") return "sc-orange";
+    if (color === "red") return "sc-red";
+    return "";
   };
 
   const apply = () => {
-    if (scores) onApply(scores);
+    if (!canApply) return;
+    const risk = riskResult || computeRiskScore(
+      Number(scores.dependance),
+      Number(scores.penetration),
+      Number(scores.maturite),
+      Number(scores.confiance)
+    );
+    onApply({
+      dependance: Number(scores.dependance),
+      penetration: Number(scores.penetration),
+      maturite: Number(scores.maturite),
+      confiance: Number(scores.confiance),
+      riskNote: risk.note,
+      riskInterpretation: risk.interpretation,
+      riskColor: risk.color,
+    });
   };
 
   return (
     <div className="calc-overlay">
       <div className="calc-modal">
-        <h3>Assistant Scoring IA</h3>
-        <p>Repondez aux criteres pour calculer les scores de risque.</p>
+        <h3>Scoring FM-DS-100</h3>
+        <p className="calc-formula">NOTE = (Dependance x Penetration) / (Maturite x Confiance)</p>
 
-        {!showResults ? (
-          <>
-            <div className="calc-questions">
-              <div className="calc-section-label">Securite & Conformite</div>
-              <label className="switch-row">
-                <span>Certification ISO 27001 / HDS / SecNumCloud</span>
-                <input type="checkbox" checked={answers.certif} onChange={() => toggle('certif')} />
-              </label>
-              <label className="switch-row">
-                <span>Hebergement des donnees en France/UE</span>
-                <input type="checkbox" checked={answers.france} onChange={() => toggle('france')} />
-              </label>
-              <label className="switch-row">
-                <span>Conformite RGPD validee (DPA signe)</span>
-                <input type="checkbox" checked={answers.rgpd} onChange={() => toggle('rgpd')} />
-              </label>
-              <label className="switch-row">
-                <span>NDA / Accord de confidentialite signe</span>
-                <input type="checkbox" checked={answers.nda} onChange={() => toggle('nda')} />
-              </label>
-              <label className="switch-row">
-                <span>Audits de securite reguliers</span>
-                <input type="checkbox" checked={answers.audits} onChange={() => toggle('audits')} />
-              </label>
-
-              <div className="divider"></div>
-              <div className="calc-section-label">Resilience & Continuite</div>
-              <label className="switch-row">
-                <span>Plan de Continuite / Backups testes</span>
-                <input type="checkbox" checked={answers.backup} onChange={() => toggle('backup')} />
-              </label>
-              <label className="switch-row">
-                <span>Strategie de sortie documentee (DORA)</span>
-                <input type="checkbox" checked={answers.exitStrategy} onChange={() => toggle('exitStrategy')} />
-              </label>
-
-              <div className="divider"></div>
-              <div className="calc-section-label">Risques</div>
-              <label className="switch-row">
-                <span>Service critique pour l'entreprise</span>
-                <input type="checkbox" checked={answers.critique} onChange={() => toggle('critique')} />
-              </label>
-              <label className="switch-row danger">
-                <span>Incident de securite &lt; 12 mois</span>
-                <input type="checkbox" checked={answers.incident} onChange={() => toggle('incident')} />
-              </label>
-            </div>
-
-            <div className="calc-actions">
-              <button onClick={onClose} className="btn-cancel">Annuler</button>
-              <button onClick={calculate} className="btn-apply">Calculer</button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="calc-results">
-              <div className="score-card">
-                <div className="score-label">Confiance</div>
-                <div className={`score-value sc-${scores.niveauConfiance <= 2 ? 'red' : scores.niveauConfiance <= 3 ? 'yellow' : 'green'}`}>
-                  {scores.niveauConfiance}/5
+        <div className="calc-dimensions">
+          {/* Dependance */}
+          <div className="calc-dim">
+            <div className="calc-dim-label">Dependance (1-4)</div>
+            <div className="calc-dim-row">
+              {DEPENDANCE_LEVELS.map((l) => (
+                <div key={l.value} className={`calc-chip ${Number(scores.dependance) === l.value ? "active chip-dep" : ""}`} onClick={() => select("dependance", l.value)} title={l.desc}>
+                  <span className="chip-val">{l.value}</span>
+                  <span className="chip-lbl">{l.label}</span>
                 </div>
-              </div>
-              <div className="score-card">
-                <div className="score-label">DORA Readiness</div>
-                <div className={`score-value sc-${scores.doraReadiness < 40 ? 'red' : scores.doraReadiness < 70 ? 'yellow' : 'green'}`}>
-                  {scores.doraReadiness}%
-                </div>
-              </div>
-              <div className="score-card">
-                <div className="score-label">ISO 27001 Maturite</div>
-                <div className={`score-value sc-${scores.isoMaturity <= 2 ? 'red' : scores.isoMaturity <= 3 ? 'yellow' : 'green'}`}>
-                  {scores.isoMaturity}/5
-                </div>
-              </div>
+              ))}
             </div>
+          </div>
 
-            <div className="calc-actions">
-              <button onClick={() => setShowResults(false)} className="btn-cancel">Modifier</button>
-              <button onClick={apply} className="btn-apply">Appliquer les Scores</button>
+          {/* Penetration */}
+          <div className="calc-dim">
+            <div className="calc-dim-label">Penetration (1-4)</div>
+            <div className="calc-dim-row">
+              {PENETRATION_LEVELS.map((l) => (
+                <div key={l.value} className={`calc-chip ${Number(scores.penetration) === l.value ? "active chip-pen" : ""}`} onClick={() => select("penetration", l.value)} title={l.desc}>
+                  <span className="chip-val">{l.value}</span>
+                  <span className="chip-lbl">{l.label}</span>
+                </div>
+              ))}
             </div>
-          </>
+          </div>
+
+          {/* Maturite */}
+          <div className="calc-dim">
+            <div className="calc-dim-label">Maturite (0-5)</div>
+            <div className="calc-dim-row calc-dim-row-6">
+              {MATURITE_LEVELS.map((l) => (
+                <div key={l.value} className={`calc-chip ${scores.maturite !== "" && Number(scores.maturite) === l.value ? "active chip-mat" : ""}`} onClick={() => select("maturite", l.value)} title={l.desc}>
+                  <span className="chip-val">{l.value}</span>
+                  <span className="chip-lbl">{l.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Confiance */}
+          <div className="calc-dim">
+            <div className="calc-dim-label">Confiance (1-5)</div>
+            <div className="calc-dim-row calc-dim-row-5">
+              {CONFIANCE_LEVELS.map((l) => (
+                <div key={l.value} className={`calc-chip ${Number(scores.confiance) === l.value ? "active chip-conf" : ""}`} onClick={() => select("confiance", l.value)} title={l.desc}>
+                  <span className="chip-val">{l.value}</span>
+                  <span className="chip-lbl">{l.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Live result */}
+        {riskResult && (
+          <div className="calc-result-box">
+            {riskResult.note !== null ? (
+              <div className={`calc-result-display ${getColorClass(riskResult.color)}`}>
+                <span className="calc-result-note">{riskResult.note}</span>
+                <span className="calc-result-label">{riskResult.interpretation}</span>
+              </div>
+            ) : (
+              <div className="calc-result-display sc-gray">
+                <span className="calc-result-label">{riskResult.interpretation}</span>
+              </div>
+            )}
+          </div>
         )}
+
+        <div className="calc-actions">
+          <button onClick={onClose} className="btn-cancel">Annuler</button>
+          <button onClick={apply} className="btn-apply" disabled={!canApply}>Appliquer</button>
+        </div>
       </div>
     </div>
   );

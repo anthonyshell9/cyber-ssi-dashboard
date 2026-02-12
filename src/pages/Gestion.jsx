@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { signOut } from "firebase/auth";
-import { auth, db } from "../lib/firebase";
+import { db } from "../lib/firebase";
 import { collection, query, orderBy, onSnapshot, doc, updateDoc, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { useNotification } from "../hooks/NotificationContext";
@@ -18,7 +17,7 @@ const EXPORT_COLUMNS = [
   { key: 'status', label: 'Statut' },
 ];
 
-const Gestion = ({ setConnectedUser }) => {
+const Gestion = () => {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
 
@@ -28,16 +27,10 @@ const Gestion = ({ setConnectedUser }) => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [activeTab, setActiveTab] = useState("dashboard");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    setConnectedUser(null);
-  };
 
   useEffect(() => {
     const q = query(collection(db, "fournisseurs"), orderBy("createdAt", "desc"));
@@ -92,45 +85,6 @@ const Gestion = ({ setConnectedUser }) => {
   };
 
   return (
-    <div className="cyber-dashboard">
-      <div className="cyber-bg-animation"></div>
-
-      <nav className="glass-nav">
-        <div className="nav-brand-area">
-          <div className="brand-logo-anim">&#9729;&#65039;</div>
-          <span className="brand-text">CYBER-SSI <span className="neon-text">COMMAND</span></span>
-        </div>
-        <div className="nav-links-center">
-          <button className={`nav-item ${activeTab==='dashboard'?'active':''}`} onClick={()=>setActiveTab('dashboard')}>Dashboard</button>
-
-          <button className="nav-item" style={{color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)', marginLeft: '10px'}} onClick={() => navigate('/crise')}>CRISE</button>
-
-          <button className="nav-item" style={{color: '#06b6d4', borderColor: 'rgba(6, 182, 212, 0.3)', marginLeft: '10px'}} onClick={() => navigate('/audits')}>PLANNING</button>
-
-          <button className="nav-item" style={{color: '#8b5cf6', borderColor: 'rgba(139, 92, 246, 0.3)', marginLeft: '10px'}} onClick={() => navigate('/annuaire')}>ANNUAIRE</button>
-
-          <button className="nav-item" style={{color: '#10b981', borderColor: 'rgba(16, 185, 129, 0.3)', marginLeft: '10px'}} onClick={() => navigate('/compare')}>COMPARER</button>
-          <button className="nav-item" style={{color: '#8b5cf6', borderColor: 'rgba(139, 92, 246, 0.3)'}} onClick={() => navigate('/evaluations')}>EVALUATIONS</button>
-
-          <div className="nav-separator" />
-          <button className="nav-item nav-dora" style={{color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)', marginLeft: '10px'}} onClick={() => navigate('/dora-register')}>DORA</button>
-          <button className="nav-item" style={{color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)'}} onClick={() => navigate('/concentration-risk')}>RISQUE</button>
-          <button className="nav-item" style={{color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)'}} onClick={() => navigate('/exit-strategies')}>SORTIE</button>
-          <button className="nav-item" style={{color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.3)'}} onClick={() => navigate('/contractual-compliance')}>CONTRATS</button>
-
-          <div className="nav-separator" />
-          <button className="nav-item" style={{color: '#06b6d4', borderColor: 'rgba(6, 182, 212, 0.3)'}} onClick={() => navigate('/risk-matrix')}>RISQUES ISO</button>
-          <button className="nav-item" style={{color: '#06b6d4', borderColor: 'rgba(6, 182, 212, 0.3)'}} onClick={() => navigate('/iso-controls')}>CONTROLES</button>
-          <button className="nav-item" style={{color: '#06b6d4', borderColor: 'rgba(6, 182, 212, 0.3)'}} onClick={() => navigate('/audit-program')}>AUDITS ISO</button>
-          <button className="nav-item" style={{color: '#06b6d4', borderColor: 'rgba(6, 182, 212, 0.3)'}} onClick={() => navigate('/sla-monitoring')}>SLA</button>
-          <button className="nav-item" style={{color: '#06b6d4', borderColor: 'rgba(6, 182, 212, 0.3)'}} onClick={() => navigate('/soa')}>SOA</button>
-        </div>
-        <div className="nav-user-area">
-          <span className="user-role">ADMIN</span>
-          <button onClick={handleLogout} className="btn-cyber-logout">QUITTER</button>
-        </div>
-      </nav>
-
       <main className="main-content">
         {criticalIncidents.length > 0 && (
           <div style={{background: 'linear-gradient(90deg, #7f1d1d, #ef4444)', color: 'white', padding: '15px 20px', borderRadius: '8px', marginBottom: '25px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #fca5a5', boxShadow: '0 0 25px rgba(239, 68, 68, 0.6)', animation: 'pulse 2s infinite', cursor: 'pointer'}} onClick={() => navigate('/crise')}>
@@ -250,7 +204,6 @@ const Gestion = ({ setConnectedUser }) => {
           )}
         </div>
       </main>
-    </div>
   );
 };
 
